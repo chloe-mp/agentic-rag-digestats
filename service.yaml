@@ -21,7 +21,7 @@ spec:
     spec:
       containerConcurrency: 2
       timeoutSeconds: 600
-      serviceAccountName: YOUR-PROJECT-NUMBER-compute@developer.gserviceaccount.com
+      serviceAccountName: agentic-rag-runtime@rag-digestats.iam.gserviceaccount.com
       containers:
       - image: europe-west1-docker.pkg.dev/rag-digestats/rag-repo/rag-app:latest
         ports:
