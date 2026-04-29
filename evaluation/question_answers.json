@@ -1,0 +1,302 @@
+[
+  {
+    "question": "Quel est le délai minimum de séjour en digestion mésophile pour un digestat conforme au CDC DIG ?",
+    "ground_truth": "En digestion mésophile, le temps de séjour doit être supérieur à 50 jours.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  },
+  {
+    "question": "Quel est le délai minimum de séjour en digestion thermophile pour un digestat conforme au CDC DIG ?",
+    "ground_truth": "En digestion thermophile, le temps de séjour doit être supérieur à 30 jours.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  },
+  {
+    "question": "Quelle est la plage de pH requise pour un digestat conforme au CDC DIG ?",
+    "ground_truth": "Le pH du digestat doit être compris entre 7 et 8,5.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  },
+  {
+    "question": "Quelle est la proportion minimale d'intrants agricoles dans la ration pour un digestat CDC DIG ?",
+    "ground_truth": "La ration doit être composée d'au moins 60 % d'intrants agricoles.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  },
+  {
+    "question": "Quelle est la proportion minimale d'effluents d'élevage dans la ration CDC DIG ?",
+    "ground_truth": "La ration doit contenir au minimum 33 % d'effluents d'élevage.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  },
+  {
+    "question": "Quelle est la siccité minimale requise pour un digestat en voie solide selon le CDC DIG ?",
+    "ground_truth": "En voie solide, la siccité du mélange doit être supérieure à 20 % (pourcentage massique de matière sèche).",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  },
+  {
+    "question": "Pendant combien de jours l'accès des animaux d'élevage aux pâturages est-il interdit après application de digestat ?",
+    "ground_truth": "L'accès des animaux d'élevage aux pâturages et l'utilisation des récoltes comme fourrage sont interdits pendant au moins 21 jours après application.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  },
+  {
+    "question": "Comment doit être stocké le digestat liquide chez l'utilisateur final selon le CDC DIG ?",
+    "ground_truth": "En cas de stockage chez l'utilisateur, le produit liquide doit être stocké dans des fosses couvertes ou lagunes étanches ou citernes souples.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  },
+  {
+    "question": "Quelles analyses doivent être conformes pour un digestat mis sur le marché selon le CDC DIG ?",
+    "ground_truth": "Les analyses sur les pathogènes, les éléments traces métalliques, les impuretés et les hydrocarbures aromatiques polycycliques (HAP) doivent être conformes.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  },
+  {
+    "question": "Quel document doit remettre le producteur de digestat à l'utilisateur final lors de la livraison ?",
+    "ground_truth": "Le producteur doit transmettre une fiche produit à l'utilisateur final.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  },
+  {
+    "question": "Quelles exigences s'appliquent au stockage du digestat liquide sur le site de production selon le CDC DIG ?",
+    "ground_truth": "Le stockage du digestat liquide sur le site de production doit être couvert et brassé.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  },
+  {
+    "question": "Quel délai doit respecter une installation ayant précédemment utilisé DigAgri1, DigAgri2 ou DigAgri3 pour sa déclaration au titre du nouveau CDC DIG ?",
+    "ground_truth": "La déclaration doit être envoyée dans un délai de 6 mois après la publication du présent cahier des charges.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  },
+  {
+    "question": "Quel délai minimum doit être respecté entre la sortie des déjections de volailles du bâtiment et l'épandage du digestat lorsque la ration contient de la litière de volailles ?",
+    "ground_truth": "Un délai de 60 jours minimum entre la sortie des déjections de volailles du bâtiment d'élevage et l'épandage du digestat doit être respecté.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  },
+  {
+    "question": "Quels modes de vente sont autorisés pour un digestat conforme au CDC DIG ?",
+    "ground_truth": "Les digestats conformes au CDC DIG sont mis sur le marché national en vrac uniquement, par cession directe entre l'exploitant de l'installation de méthanisation et l'utilisateur final, pour des usages en grandes cultures et sur prairies.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  },
+  {
+    "question": "Lorsqu'une séparation de phase est effectuée sur un digestat CDC DIG, combien de produits distincts sont générés et quelles contraintes s'appliquent ?",
+    "ground_truth": "La fraction liquide et la fraction solide constituent deux produits distincts devant chacun respecter les exigences du cahier des charges.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  },
+  {
+    "question": "Quelle est la catégorie réglementaire du digestat au titre de la réglementation sur les sous-produits animaux ?",
+    "ground_truth": "Le digestat est une matière de catégorie 2 au titre de la réglementation sur les sous-produits animaux.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  },
+  {
+    "question": "Peut-on épandre du digestat CDC DIG sur des prairies ?",
+    "ground_truth": "Oui. Les digestats conformes au CDC DIG peuvent être utilisés en grandes cultures et sur prairies.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  },
+  {
+    "question": "Un digestat CDC DIG ayant subi un séchage thermique sur le site de méthanisation reste-t-il conforme au cahier des charges ?",
+    "ground_truth": "Oui, à condition qu'il n'y ait aucun ajout de matière ou de substance lors de ce traitement. Le metteur sur le marché doit s'assurer que les valeurs étiquetées sont toujours valides et les mettre à jour si besoin.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  },
+  {
+    "question": "Dans quelle condition une transformation supplémentaire du digestat peut-elle être imposée lors de la délivrance de l'agrément CDC DIG ?",
+    "ground_truth": "Une transformation peut être rendue obligatoire lorsque le lisier utilisé comme matière première est d'origine multiple ou représente un volume annuel significatif, afin de limiter les risques pour la santé humaine ou animale. Le digestat issu de cette transformation est un digestat dérivé de lisier transformé conformément à l'article 8 de l'arrêté du 9 avril 2018.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  },
+  {
+    "question": "Quelles conditions sanitaires doit remplir le lisier non transformé de volaille pour être échangé entre États membres ?",
+    "ground_truth": "Le lisier doit provenir d'une zone exempte de restrictions au titre de la maladie de Newcastle ou de l'influenza aviaire. Le lisier provenant de troupeaux vaccinés contre la maladie de Newcastle ne peut pas être expédié vers une zone 'ne vaccinant pas contre la maladie de Newcastle'. Une attestation sanitaire et une décision favorable de l'Etat membre de destination sont obligatoires.",
+    "source_document": "CE_142_2011.pdf",
+    "question_type": "transfrontaliere"
+  },
+  {
+    "question": "Quel document doit accompagner un envoi de lisier de volaille entre États membres ?",
+    "ground_truth": "Une attestation sanitaire établie conformément au modèle figurant au point 3 de l'Annexe XI du Règlement UE 142/2011 doit être jointe au document commercial qui accompagne l'envoi.",
+    "source_document": "CE_142_2011.pdf",
+    "question_type": "transfrontaliere"
+  },
+  {
+    "question": "Auprès de quelle autorité une installation située dans un autre État membre doit-elle déclarer son digestat mis sur le marché français ?",
+    "ground_truth": "Dans le cas d'installations présentes dans un autre État membre, la déclaration est réalisée auprès du SRAL de la région dans laquelle le digestat est mis sur le marché.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "transfrontaliere"
+  },
+  {
+    "question": "Un digestat transformé provenant des Pays-Bas peut-il être mis sur le marché français, et sous quelles conditions ?",
+    "ground_truth": "Oui. Seuls les digestats transformés au sens du règlement (CE) n° 1069/2009 peuvent être échangés entre États membres, à condition d'être issus d'une installation disposant d'un agrément sanitaire européen. La déclaration doit être réalisée auprès du SRAL de la région dans laquelle le digestat est mis sur le marché.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "transfrontaliere"
+  },
+  {
+    "question": "L'autorité compétente de l'État membre de destination peut-elle imposer des exigences supplémentaires pour un envoi de lisier non transformé ?",
+    "ground_truth": "Oui. Conformément à l'article 48, paragraphe 1, point c) ii) du règlement (CE) n° 1069/2009, l'autorité peut exiger des informations complémentaires sur l'envoi prévu (localisation exacte du déchargement) et imposer le stockage du lisier avant son épandage.",
+    "source_document": "CE_142_2011.pdf",
+    "question_type": "transfrontaliere"
+  },
+  {
+    "question": "Sous quelles conditions le lisier non transformé d'équidés peut-il faire l'objet d'échanges entre États membres ?",
+    "ground_truth": "Le lisier non transformé d'équidés peut être échangé à condition que l'État membre de destination ait marqué son accord par une décision favorable (article 48, paragraphe 1, règlement CE 1069/2009), et qu'il ne provienne pas d'une exploitation soumise à des restrictions sanitaires concernant la morve, la stomatite vésiculeuse, le charbon bactéridien ou la rage.",
+    "source_document": "CE_142_2011.pdf",
+    "question_type": "transfrontaliere"
+  },
+  {
+    "question": "Quelles maladies animales peuvent provoquer une interdiction d'échange de lisier non transformé entre États membres ?",
+    "ground_truth": "Pour les espèces autres que la volaille ou les équidés : les maladies transmissibles graves. Pour la volaille : la maladie de Newcastle et l'influenza aviaire. Pour les équidés : la morve, la stomatite vésiculeuse, le charbon bactéridien et la rage.",
+    "source_document": "CE_142_2011.pdf",
+    "question_type": "transfrontaliere"
+  },
+  {
+    "question": "Un exploitant néerlandais souhaitant vendre son digestat en France doit-il obtenir une autorisation française ?",
+    "ground_truth": "Oui. Le digestat doit être transformé au sens du règlement (CE) n° 1069/2009 et issu d'une installation disposant d'un agrément sanitaire européen. La déclaration de mise sur le marché en France doit être réalisée auprès du SRAL de la région concernée.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "transfrontaliere"
+  },
+  {
+    "question": "La mise sur le marché du lisier transformé entre États membres nécessite-t-elle une décision administrative de l'État destinataire ?",
+    "ground_truth": "Oui. Selon l'Annexe XI, Section 2 du Règlement UE 142/2011, la mise sur le marché de lisier transformé doit faire l'objet d'une décision favorable de l'État membre de destination conformément à l'article 48, paragraphe 1, du règlement (CE) n° 1069/2009.",
+    "source_document": "CE_142_2011.pdf",
+    "question_type": "transfrontaliere"
+  },
+  {
+    "question": "L'épandage de digestat est-il autorisé sur les cultures maraîchères ?",
+    "ground_truth": "Non. L'épandage est interdit sur les cultures maraîchères ou légumières.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "negative"
+  },
+  {
+    "question": "Les matières animales crues sont-elles autorisées comme intrants dans le CDC DIG ?",
+    "ground_truth": "Non. Les matières animales crues, dont les biodéchets, sont interdites comme intrants dans le cadre du CDC DIG.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "negative"
+  },
+  {
+    "question": "Le lisier non transformé d'espèces autres que la volaille ou les équidés peut-il être librement échangé entre États membres ?",
+    "ground_truth": "Non. Ces échanges sont interdits entre États membres, sauf exception très limitée : lisier provenant d'une zone exempte de maladie transmissible grave et destiné à être épandu sur les terres d'une même exploitation de part et d'autre de la frontière.",
+    "source_document": "CE_142_2011.pdf",
+    "question_type": "negative"
+  },
+  {
+    "question": "Le lisier non transformé peut-il être importé dans l'UE depuis un pays tiers ?",
+    "ground_truth": "Non. L'importation dans l'Union et le transit par celle-ci du lisier non transformé sont interdits selon le Règlement UE 142/2011.",
+    "source_document": "CE_142_2011.pdf",
+    "question_type": "negative"
+  },
+  {
+    "question": "Un digestat non transformé peut-il être échangé entre États membres de l'UE ?",
+    "ground_truth": "Non. Seuls les digestats transformés au sens du règlement (CE) n° 1069/2009 peuvent être échangés entre États membres.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "negative"
+  },
+  {
+    "question": "Un digestat conforme au CDC DIG peut-il être vendu en sachet conditionné ?",
+    "ground_truth": "Non. Les digestats conformes au CDC DIG sont mis sur le marché en vrac uniquement.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "negative"
+  },
+  {
+    "question": "Un digestat conforme au CDC DIG peut-il être vendu à un intermédiaire revendeur ?",
+    "ground_truth": "Non. La mise sur le marché se fait par cession directe entre l'exploitant de l'installation de méthanisation et l'utilisateur final uniquement.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "negative"
+  },
+  {
+    "question": "Le digestat issu d'une installation utilisant des polymères synthétiques dans la séparation de phase est-il conforme au CDC DIG ?",
+    "ground_truth": "Non. Le digestat conforme au CDC DIG doit résulter d'un procédé sans utilisation de polymères synthétiques.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "negative"
+  },
+  {
+    "question": "Le lisier non transformé de volaille provenant d'un troupeau vacciné contre la maladie de Newcastle peut-il être envoyé dans toute zone de l'UE ?",
+    "ground_truth": "Non. Ce lisier ne peut pas être expédié vers une région ayant le statut de zone 'ne vaccinant pas contre la maladie de Newcastle' conformément à l'article 15, paragraphe 2, de la directive 2009/158/CE.",
+    "source_document": "CE_142_2011.pdf",
+    "question_type": "negative"
+  },
+  {
+    "question": "Un digestat produit dans une installation française disposant d'une dérogation nationale (article 9 II arrêté 9 avril 2018) peut-il être exporté vers un autre État membre ?",
+    "ground_truth": "Non. Ce digestat est qualifié de digestat non transformé selon le règlement (CE) n° 1069/2009, et seuls les digestats transformés peuvent être échangés entre États membres.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "negative"
+  },
+  {
+    "question": "En digestion anaérobie mésophile à 37-40°C sans traitement complémentaire, le digestat est-il directement conforme aux exigences sanitaires du Règlement UE 2019/1009 ?",
+    "ground_truth": "Non. La digestion mésophile seule ne suffit pas. Elle doit être complétée par une pasteurisation conforme à l'annexe V du règlement UE 142/2011, ou par un compostage à 70°C pendant au moins 3 jours, 65°C pendant 5 jours, 60°C pendant 7 jours, ou 55°C pendant 14 jours.",
+    "source_document": "Reglement_UE_2019_1009.pdf",
+    "question_type": "negative"
+  },
+  {
+    "question": "Un digestat CDC DIG peut-il être épandu immédiatement après livraison si la ration contient de la litière de volailles ?",
+    "ground_truth": "Non. Un délai de 60 jours minimum entre la sortie des déjections du bâtiment et l'épandage doit être respecté. L'accès des animaux aux pâturages est également interdit pendant au moins 21 jours après application.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "negative"
+  },
+  {
+    "question": "Quelles sont les trois voies permettant à un digestat de sortir du statut de déchet en France ?",
+    "ground_truth": "En France, il existe trois voies : obtenir une Autorisation de Mise sur le Marché par homologation (AMM), être conforme à une norme NFU (par exemple pour les digestats compostés), ou être conforme au cahier des charges CDC DIG.",
+    "source_document": "https://fertiliser-avec-des-digestats.fr",
+    "question_type": "multi_documents"
+  },
+  {
+    "question": "Comment le règlement CE 1069/2009 et le CDC DIG français s'articulent-ils pour définir le statut d'un digestat transformé ?",
+    "ground_truth": "Le règlement (CE) n° 1069/2009 définit la notion de digestat transformé au niveau européen. Le CDC DIG s'y réfère directement : un digestat est transformé s'il est produit dans une installation utilisant des standards européens ou reconnus équivalents. Le CDC DIG précise que seuls ces digestats peuvent être échangés entre États membres et nécessitent un agrément sanitaire européen.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "multi_documents"
+  },
+  {
+    "question": "Quelles températures et durées permettent d'atteindre la conformité sanitaire en digestion thermophile selon le Règlement UE 2019/1009 ?",
+    "ground_truth": "Selon le Règlement UE 2019/1009, les critères sont : 65°C ou plus pendant au moins 5 jours, 60°C ou plus pendant au moins 7 jours, ou 55°C ou plus pendant au moins 14 jours.",
+    "source_document": "Reglement_UE_2019_1009.pdf",
+    "question_type": "multi_documents"
+  },
+  {
+    "question": "Qu'est-ce qu'un digestat transformé et en quoi se distingue-t-il d'un digestat non transformé selon le CDC DIG ?",
+    "ground_truth": "Un digestat transformé est produit dans une installation utilisant des standards européens ou reconnus équivalents. Un digestat non transformé est produit en France dans une installation disposant d'une dérogation nationale (article 9 II arrêté 9 avril 2018). Seul le digestat transformé peut être échangé entre États membres.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "multi_documents"
+  },
+  {
+    "question": "Quelles réglementations encadrent simultanément la valorisation des digestats en France ?",
+    "ground_truth": "La valorisation des digestats est encadrée par les arrêtés ICPE, la réglementation sur les sous-produits animaux (règlement CE 1069/2009), et la Directive Nitrates lorsqu'on est en zone vulnérable.",
+    "source_document": "https://fertiliser-avec-des-digestats.fr",
+    "question_type": "multi_documents"
+  },
+  {
+    "question": "En quoi les exigences sanitaires du règlement UE 142/2011 pour le lisier transformé diffèrent-elles de celles du CDC DIG pour le digestat ?",
+    "ground_truth": "Le Règlement UE 142/2011 fixe les conditions générales de mise sur le marché du lisier transformé entre États membres (décision favorable de l'État destinataire). Le CDC DIG ajoute des exigences spécifiques : pH 7-8,5, temps de séjour minimum, proportions d'intrants (60% agricoles, 33% effluents d'élevage), analyses HAP/pathogènes/ETM, et vente en vrac par cession directe uniquement.",
+    "source_document": "CE_142_2011.pdf",
+    "question_type": "multi_documents"
+  },
+  {
+    "question": "Le digestat CDC DIG nécessite-t-il un agrément sanitaire préalable, et dans quel cadre réglementaire ?",
+    "ground_truth": "Oui. Le CDC DIG précise qu'il définit des exigences pour les digestats éligibles à cette voie d'autorisation, mais ne dispense pas des exigences préalables de l'agrément sanitaire au titre du règlement (CE) n° 1069/2009.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "multi_documents"
+  },
+  {
+    "question": "Quelles exigences d'hygiène le Règlement UE 142/2011 impose-t-il aux usines de méthanisation traitant des sous-produits animaux ?",
+    "ground_truth": "Les sous-produits animaux doivent être convertis le plus rapidement possible après arrivée. Les conteneurs et véhicules pour matières non traitées doivent être nettoyés et désinfectés dans un secteur réservé, séparé des produits traités. Des mesures systématiques de prévention contre les oiseaux, rongeurs, insectes et autres nuisibles doivent être prises dans le cadre d'un programme détaillé de lutte.",
+    "source_document": "CE_142_2011.pdf",
+    "question_type": "multi_documents"
+  },
+  {
+    "question": "Quel est le taux de consommation d'oxygène comme critère de stabilité du digestat selon le Règlement UE 2019/1009, et quelle est sa limite d'application ?",
+    "ground_truth": "Le taux de consommation d'oxygène est un indicateur du degré de décomposition de la matière organique biodégradable dans un laps de temps déterminé. Cette méthode ne convient pas pour les matières constituées de plus de 20 % de particules de taille supérieure à 10 mm.",
+    "source_document": "Reglement_UE_2019_1009.pdf",
+    "question_type": "multi_documents"
+  },
+  {
+    "question": "Une installation de méthanisation en voie humide doit-elle disposer d'un équipement particulier selon le CDC DIG ?",
+    "ground_truth": "Oui. En voie humide, l'installation doit disposer d'une agitation mécanique.",
+    "source_document": "Texte_legifrance_DIG.pdf",
+    "question_type": "factuelle_simple"
+  }
+]

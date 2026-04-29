@@ -1,0 +1,70 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: rag-digestats
+  labels:
+    managed-by: github-actions
+    cloud.googleapis.com/location: europe-west1
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/maxScale: "10"
+spec:
+  template:
+    metadata:
+      labels:
+        managed-by: github-actions
+        run.googleapis.com/startupProbeType: Default
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "2"
+        run.googleapis.com/startup-cpu-boost: "true"
+    spec:
+      containerConcurrency: 2
+      timeoutSeconds: 600
+      serviceAccountName: YOUR-PROJECT-NUMBER-compute@developer.gserviceaccount.com
+      containers:
+      - image: europe-west1-docker.pkg.dev/rag-digestats/rag-repo/rag-app:latest
+        ports:
+        - name: http1
+          containerPort: 8080
+        env:
+        - name: GOOGLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: google-api-key
+        - name: TAVILY_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: tavily-api-key
+        - name: APP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: app-password
+        - name: LANGFUSE_PUBLIC_KEY
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: langfuse-public-key
+        - name: LANGFUSE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: langfuse-secret-key
+        - name: LANGFUSE_HOST
+          value: https://cloud.langfuse.com
+        resources:
+          limits:
+            cpu: "2"
+            memory: 8Gi
+        startupProbe:
+          timeoutSeconds: 240
+          periodSeconds: 240
+          failureThreshold: 3
+          tcpSocket:
+            port: 8080
+  traffic:
+  - percent: 100
+    latestRevision: true
