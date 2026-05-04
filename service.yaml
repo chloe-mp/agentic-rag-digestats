@@ -15,8 +15,8 @@ spec:
         managed-by: github-actions
         run.googleapis.com/startupProbeType: Default
       annotations:
-        autoscaling.knative.dev/minScale: "1"
-        autoscaling.knative.dev/maxScale: "2"
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "1"
         run.googleapis.com/startup-cpu-boost: "true"
     spec:
       containerConcurrency: 2
@@ -28,6 +28,16 @@ spec:
         - name: http1
           containerPort: 8080
         env:
+        - name: QDRANT_URL
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: qdrant-url
+        - name: QDRANT_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: qdrant-api-key
         - name: GOOGLE_API_KEY
           valueFrom:
             secretKeyRef:

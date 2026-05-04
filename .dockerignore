@@ -1,11 +1,34 @@
-__pycache__
+# Python
+__pycache__/
 *.pyc
-.git
-.gitignore
-.env
 *.egg-info
+.pytest_cache/
+.ruff_cache/
+
+# Environnement
+.env
+.venv/
+venv/
+
+# OS
 .DS_Store
-evaluation/
-tests/
+
+# Git
+.git/
+.gitignore
+
+# Données et artefacts (pas nécessaires en prod)
+qdrant/
 docs/
-*.json
+evaluation/
+
+# Tests (pas nécessaires en prod)
+tests/
+
+# Documentation locale et scripts
+DEPLOY.md
+README.md
+deploy.sh
+
+# Claude Code workspace
+.claude/

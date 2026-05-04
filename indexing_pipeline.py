@@ -27,7 +27,7 @@ else:
 
 BASE_DIR = Path(os.environ.get("APP_BASE_DIR", "."))
 PDF_DIR = BASE_DIR / "docs"
-QDRANT_PATH = BASE_DIR / "qdrant"
+
 
 WEB_URLS = []
 
@@ -55,7 +55,22 @@ def bge_m3_embed(texts: list[str]):
         "sparse": output["lexical_weights"]
     }
 
-_qdrant_client = QdrantClient(path=str(QDRANT_PATH))
+_QDRANT_URL = os.environ.get("QDRANT_URL")
+_QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY")
+
+if not _QDRANT_URL or not _QDRANT_API_KEY:
+    raise RuntimeError(
+        "QDRANT_URL et QDRANT_API_KEY doivent être définis. "
+        "En local : ajoute-les dans .env. "
+        "En CI/CD : configure-les dans GitHub Secrets. "
+        "En prod : configure-les dans Google Secret Manager."
+    )
+
+_qdrant_client = QdrantClient(
+    url=_QDRANT_URL,
+    api_key=_QDRANT_API_KEY,
+    timeout=30,
+)
 
 if not any(c.name == "reglementation_digestats" for c in _qdrant_client.get_collections().collections):
     _qdrant_client.create_collection(
