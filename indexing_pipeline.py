@@ -14,6 +14,7 @@ from qdrant_client import models
 from qdrant_client.models import Distance, VectorParams, SparseVectorParams, Modifier
 from sentence_transformers import CrossEncoder
 from FlagEmbedding import BGEM3FlagModel
+import warnings
 
 os.environ["USER_AGENT"] = "regulatory-rag-bot/1.0"
 load_dotenv()
@@ -58,42 +59,47 @@ def bge_m3_embed(texts: list[str]):
 _QDRANT_URL = os.environ.get("QDRANT_URL")
 _QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY")
 
-if not _QDRANT_URL or not _QDRANT_API_KEY:
-    raise RuntimeError(
-        "QDRANT_URL et QDRANT_API_KEY doivent être définis. "
-        "En local : ajoute-les dans .env. "
-        "En CI/CD : configure-les dans GitHub Secrets. "
-        "En prod : configure-les dans Google Secret Manager."
+if _QDRANT_URL and _QDRANT_API_KEY:
+    _qdrant_client = QdrantClient(
+        url=_QDRANT_URL,
+        api_key=_QDRANT_API_KEY,
+        timeout=30,
     )
-
-_qdrant_client = QdrantClient(
-    url=_QDRANT_URL,
-    api_key=_QDRANT_API_KEY,
-    timeout=30,
-)
-
-if not any(c.name == "reglementation_digestats" for c in _qdrant_client.get_collections().collections):
-    _qdrant_client.create_collection(
-        collection_name="reglementation_digestats",
-        vectors_config={
-            "dense": VectorParams(size=1024, distance=Distance.COSINE)
-        },
-        sparse_vectors_config={
-            "sparse": SparseVectorParams(modifier=Modifier.IDF)
-        }
+else:
+    warnings.warn(
+        "QDRANT_URL et QDRANT_API_KEY non définis. "
+        "Le client Qdrant n'est pas initialisé — l'app ne pourra pas faire de retrieval. "
+        "Ce comportement est attendu en environnement de test. "
+        "En prod : configure les variables d'environnement.",
+        RuntimeWarning,
     )
-    print("[INIT] Collection 'reglementation_digestats' créée.")
+    _qdrant_client = None
+
+if _qdrant_client is not None:
+    if not any(c.name == "reglementation_digestats" for c in _qdrant_client.get_collections().collections):
+        _qdrant_client.create_collection(
+            collection_name="reglementation_digestats",
+            vectors_config={
+                "dense": VectorParams(size=1024, distance=Distance.COSINE)
+            },
+            sparse_vectors_config={
+                "sparse": SparseVectorParams(modifier=Modifier.IDF)
+            }
+        )
+        print("[INIT] Collection 'reglementation_digestats' créée.")
 
 _reranker = CrossEncoder("BAAI/bge-reranker-v2-m3", device=DEVICE)
 
-try:
-    _qdrant_points, _ = _qdrant_client.scroll(
-        collection_name="reglementation_digestats",
-        limit=100_000,
-        with_payload=True,
-    )
-except Exception:
-    _qdrant_points = []
+_qdrant_points = []
+if _qdrant_client is not None:
+    try:
+        _qdrant_points, _ = _qdrant_client.scroll(
+            collection_name="reglementation_digestats",
+            limit=100_000,
+            with_payload=True,
+        )
+    except Exception:
+        _qdrant_points = []
 
 print(f"[INIT] Pret. Device: {DEVICE}, Chunks: {len(_qdrant_points)}")
 
