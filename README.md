@@ -182,11 +182,7 @@ Results are written to `evaluation/ragas_results.json`.
 ## Limitations & next steps
 
 ### Retrieval
-- **Context precision (0.696) is below where it should be.** Hybrid
-  retrieval favors recall over precision; the next step is adding a
-  reranker (e.g. BGE-reranker-v2-m3) to filter the candidate set after
-  fusion. Expected uplift: +10–15 points on context precision without
-  loss of recall.
+- **Context precision (0.696) is below where it should be.** 
 - **No query routing.** Some questions are pure factual lookups (no
   reasoning needed) and could be answered with simple BM25; others require
   multi-step reasoning. Currently every question goes through the same
