@@ -1,7 +1,7 @@
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import MessagesState
 
-from models import gemini
+from models import gemini_lite
 
 REWRITE_PROMPT = (
     "Reformule cette question en une seule phrase technique pour une "
@@ -17,7 +17,7 @@ def rewrite_question(state: MessagesState, config: RunnableConfig):
     )
 
     prompt = REWRITE_PROMPT.format(question=last_human_message.content)
-    response = gemini.invoke([{"role": "user", "content": prompt}], config=config)
+    response = gemini_lite.invoke([{"role": "user", "content": prompt}], config=config)
 
     # ASTUCE : On remplace le message humain par la version optimisée
     # au lieu d'en ajouter un nouveau, pour ne pas perdre l'agent.

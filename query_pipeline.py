@@ -2,7 +2,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import MessagesState
 
 from indexing_pipeline import retrieve_context
-from models import gemini
+from models import gemini_lite
 from web_tool import search_web
 
 SYSTEM_PROMPT = (
@@ -19,9 +19,9 @@ SYSTEM_PROMPT = (
     "RECOMMANDATION : N'hésite pas à appeler les DEUX outils en même temps si nécessaire."
 )
 
-# On lie les DEUX outils ici
+# On lie les DEUX outils ici (sur Flash Lite : la planification est une tâche simple)
 tools = [retrieve_context, search_web]
-llm_with_tools = gemini.bind_tools(tools)
+llm_with_tools = gemini_lite.bind_tools(tools)
 
 
 def generate_query_or_respond(state: MessagesState, config: RunnableConfig):

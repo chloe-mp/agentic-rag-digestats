@@ -221,7 +221,6 @@ Honest list of things I'd improve before claiming this is "done":
 
 - **Improve PDF parsing** (move from `pdfplumber` to PyMuPDF or Docling for better table/structure preservation in regulatory PDFs).
 - **Improve context precision (0.696 → target 0.85+):** stricter LLM grading node, revisit chunk size for dense passages, per-query-type reranker threshold.
-- **Use Gemini 2.5 Flash Lite for routing/grading nodes** (10× cheaper than Flash) — only the final generation needs Flash quality.
 - **Evaluate self-hosted Qdrant on a small VPS** as a cost comparison once volume grows; Qdrant Cloud Standard becomes worth the upgrade only beyond ~96€/month equivalent.
 - **A/B framework for retrieval changes** — currently relying on RAGAS deltas only, which is fine for now but won't scale once traffic grows.
 

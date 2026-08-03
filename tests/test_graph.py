@@ -52,7 +52,7 @@ class TestGradeDocuments:
     """Vérifie le routage selon la pertinence du document et le nombre de tentatives."""
 
     @patch("document_grader.get_config", return_value={"configurable": {}, "callbacks": []})
-    @patch("document_grader.gemini")
+    @patch("document_grader.gemini_lite")
     def test_doc_pertinent_route_vers_generate_answer(self, mock_gemini, _):
         from document_grader import GradeDocuments, grade_documents
 
@@ -66,7 +66,7 @@ class TestGradeDocuments:
         assert grade_documents(state) == "generate_answer"
 
     @patch("document_grader.get_config", return_value={"configurable": {}, "callbacks": []})
-    @patch("document_grader.gemini")
+    @patch("document_grader.gemini_lite")
     def test_doc_non_pertinent_premiere_tentative_route_vers_rewrite(self, mock_gemini, _):
         from document_grader import GradeDocuments, grade_documents
 
@@ -80,7 +80,7 @@ class TestGradeDocuments:
         assert grade_documents(state) == "rewrite_question"
 
     @patch("document_grader.get_config", return_value={"configurable": {}, "callbacks": []})
-    @patch("document_grader.gemini")
+    @patch("document_grader.gemini_lite")
     def test_doc_non_pertinent_apres_deux_tentatives_route_vers_search_web(self, mock_gemini, _):
         from document_grader import GradeDocuments, grade_documents
 
@@ -95,7 +95,7 @@ class TestGradeDocuments:
         assert grade_documents(state) == "search_web"
 
     @patch("document_grader.get_config", return_value={"configurable": {}, "callbacks": []})
-    @patch("document_grader.gemini")
+    @patch("document_grader.gemini_lite")
     def test_comptage_tool_attempts_exact(self, mock_gemini, _):
         from document_grader import GradeDocuments, grade_documents
 
@@ -188,7 +188,7 @@ class TestGenerateAnswer:
 class TestRewriteQuestion:
     """Vérifie la reformulation de la question utilisateur."""
 
-    @patch("rewrite_question.gemini")
+    @patch("rewrite_question.gemini_lite")
     def test_reformule_le_dernier_message(self, mock_gemini):
         from rewrite_question import rewrite_question
 
@@ -200,7 +200,7 @@ class TestRewriteQuestion:
 
         assert result["messages"][-1].content == "Critères éligibilité DIG réglementation agricole"
 
-    @patch("rewrite_question.gemini")
+    @patch("rewrite_question.gemini_lite")
     def test_retourne_un_dict_avec_messages(self, mock_gemini):
         from rewrite_question import rewrite_question
 
@@ -211,7 +211,7 @@ class TestRewriteQuestion:
         assert isinstance(result, dict)
         assert "messages" in result
 
-    @patch("rewrite_question.gemini")
+    @patch("rewrite_question.gemini_lite")
     def test_conserve_le_nombre_de_messages(self, mock_gemini):
         from rewrite_question import rewrite_question
 
@@ -331,7 +331,7 @@ class TestGradeDocumentsMultiTour:
     """Le grader doit raisonner sur le tour courant, pas sur le début du thread."""
 
     @patch("document_grader.get_config", return_value={"configurable": {}, "callbacks": []})
-    @patch("document_grader.gemini")
+    @patch("document_grader.gemini_lite")
     def test_utilise_la_question_du_tour_courant(self, mock_gemini, _):
         from document_grader import GradeDocuments, grade_documents
 
@@ -346,7 +346,7 @@ class TestGradeDocumentsMultiTour:
         assert "ANCIENNE question du tour 1" not in prompt
 
     @patch("document_grader.get_config", return_value={"configurable": {}, "callbacks": []})
-    @patch("document_grader.gemini")
+    @patch("document_grader.gemini_lite")
     def test_compteur_tentatives_limite_au_tour_courant(self, mock_gemini, _):
         from document_grader import GradeDocuments, grade_documents
 
@@ -361,7 +361,7 @@ class TestGradeDocumentsMultiTour:
 class TestRewriteQuestionMultiTour:
     """La reformulation cible le dernier message humain, pas le ToolMessage."""
 
-    @patch("rewrite_question.gemini")
+    @patch("rewrite_question.gemini_lite")
     def test_reformule_le_message_humain_pas_le_tool_message(self, mock_gemini):
         from rewrite_question import rewrite_question
 
@@ -375,7 +375,7 @@ class TestRewriteQuestionMultiTour:
         assert "CONTEXTE_TOOL_A_PRESERVER" in contents  # le ToolMessage n'est plus écrasé
         assert "Question originale" not in contents
 
-    @patch("rewrite_question.gemini")
+    @patch("rewrite_question.gemini_lite")
     def test_reformule_la_question_du_tour_courant(self, mock_gemini):
         from rewrite_question import rewrite_question
 

@@ -1,11 +1,12 @@
 import hmac
+import json
 import os
 import uuid
 from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 from assemble_graph import graph
@@ -51,6 +52,15 @@ APP_PASSWORD = os.environ.get("APP_PASSWORD")
 
 STATIC_DIR = Path(__file__).parent / "static"
 
+# Statuts affichés dans l'UI pendant que le graphe travaille (latence perçue)
+NODE_STATUS = {
+    "generate_query_or_respond": "Analyse de la question…",
+    "retrieve": "Recherche dans la base réglementaire…",
+    "rewrite_question": "Reformulation de la question…",
+    "search_web": "Recherche web complémentaire…",
+    "generate_answer": "Rédaction de la réponse…",
+}
+
 
 class ChatRequest(BaseModel):
     question: str
@@ -58,10 +68,21 @@ class ChatRequest(BaseModel):
     password: str | None = None
 
 
-class ChatResponse(BaseModel):
-    answer: str
-    thread_id: str
-    sources: list[str]
+def _sse(event: str, data: dict) -> str:
+    """Formate un événement Server-Sent Events."""
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+def _text(content) -> str:
+    """Normalise le contenu d'un chunk LLM (str ou liste de blocs) en texte."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "".join(
+            part.get("text", "") if isinstance(part, dict) else str(part)
+            for part in content
+        )
+    return ""
 
 
 @app.get("/api/health")
@@ -70,72 +91,106 @@ async def health():
     return {"status": "ok", "langfuse": "connected" if LANGFUSE_AVAILABLE else "unavailable"}
 
 
-@app.post("/api/chat", response_model=ChatResponse)
+@app.post("/api/chat")
 async def chat(req: ChatRequest):
     """
-    Endpoint principal :
-    1. Vérifie le mot de passe.
-    2. Configure le tracing Langfuse.
-    3. Exécute le graphe LangGraph.
+    Endpoint principal (Server-Sent Events) :
+    1. Vérifie le mot de passe (fail-closed).
+    2. Stream les statuts de progression, les sources, puis les tokens
+       de la réponse au fil de la génération (latence perçue minimale).
     """
-
-    # 1. Vérification du mot de passe (timing-safe, fail-closed)
     if not APP_PASSWORD:
         raise HTTPException(status_code=500, detail="Authentification non configurée côté serveur")
     if not hmac.compare_digest(req.password or "", APP_PASSWORD):
         raise HTTPException(status_code=401, detail="Mot de passe incorrect")
 
-    # 2. Préparation de la session (Thread ID)
     thread_id = req.thread_id or f"chat_{uuid.uuid4().hex[:8]}"
-
-    # 3. Configuration de Langfuse (Callbacks)
     langfuse_handler = get_langfuse_handler()
-    callbacks = [langfuse_handler] if langfuse_handler else []
-
-    # 4. Configuration de LangGraph
     config = {
         "configurable": {"thread_id": thread_id},
-        "callbacks": callbacks,
+        "callbacks": [langfuse_handler] if langfuse_handler else [],
     }
-
     inputs = {"messages": [("user", req.question)]}
-    answer = ""
-    sources = []
 
-    # 5. Exécution du flux RAG
-    ctx = propagate_attributes(session_id=thread_id, user_id="user") if LANGFUSE_AVAILABLE else None
-    try:
-        if ctx:
-            ctx.__enter__()
-        for chunk in graph.stream(inputs, config=config):
-            for node, update in chunk.items():
-                if node == "retrieve" and "messages" in update:
-                    last_msg = update["messages"][-1]
-                    if hasattr(last_msg, "artifact") and last_msg.artifact:
-                        for doc in last_msg.artifact:
-                            src = doc.metadata.get("source", "Source inconnue")
-                            if src not in sources:
-                                sources.append(src)
+    def event_stream():
+        sources = []
+        sources_sent = False
+        streamed_any_token = False
+        direct_answer = ""
+        final_answer = ""
+        ctx = (
+            propagate_attributes(session_id=thread_id, user_id="user")
+            if LANGFUSE_AVAILABLE
+            else None
+        )
+        try:
+            if ctx:
+                ctx.__enter__()
+            yield _sse("meta", {"thread_id": thread_id})
 
-                if node == "search_web" and "web_search" not in sources:
-                    sources.append("Recherche Web")
+            for mode, payload in graph.stream(inputs, config=config, stream_mode=["updates", "messages"]):
+                if mode == "updates":
+                    for node, update in payload.items():
+                        if node in NODE_STATUS:
+                            yield _sse("status", {"message": NODE_STATUS[node]})
 
-                if node == "generate_answer" and "messages" in update:
-                    answer = update["messages"][-1].content
+                        if node == "retrieve" and "messages" in update:
+                            last_msg = update["messages"][-1]
+                            if getattr(last_msg, "artifact", None):
+                                for doc in last_msg.artifact:
+                                    src = doc.metadata.get("source", "Source inconnue")
+                                    if src not in sources:
+                                        sources.append(src)
 
-        if not answer:
-            answer = "Désolé, je n'ai pas pu générer de réponse."
+                        if node == "search_web" and "Recherche Web" not in sources:
+                            sources.append("Recherche Web")
 
-    except Exception as e:
-        print(f"Erreur lors du streaming LangGraph : {e}")
-        raise HTTPException(status_code=500, detail="Erreur interne du moteur RAG")
-    finally:
-        if ctx:
-            ctx.__exit__(None, None, None)
-        if _langfuse:
-            _langfuse.flush()
+                        # Réponse directe du planner (sans appel d'outil) :
+                        # son message EST la réponse finale.
+                        if node == "generate_query_or_respond" and "messages" in update:
+                            msg = update["messages"][-1]
+                            if not getattr(msg, "tool_calls", None):
+                                direct_answer = _text(getattr(msg, "content", ""))
 
-    return ChatResponse(answer=answer, thread_id=thread_id, sources=sources)
+                        if node == "generate_answer" and "messages" in update:
+                            final_answer = _text(update["messages"][-1].content)
+                            if not sources_sent:
+                                yield _sse("sources", {"sources": sources})
+                                sources_sent = True
+
+                elif mode == "messages":
+                    chunk, metadata = payload
+                    if metadata.get("langgraph_node") == "generate_answer":
+                        text = _text(chunk.content)
+                        if text:
+                            streamed_any_token = True
+                            yield _sse("token", {"content": text})
+
+            # Fallbacks : réponse directe du planner, ou réponse générée
+            # non streamée (le stream de tokens n'a rien produit).
+            if not streamed_any_token:
+                fallback = direct_answer or final_answer
+                if fallback:
+                    yield _sse("token", {"content": fallback})
+
+            if not sources_sent:
+                yield _sse("sources", {"sources": sources})
+            yield _sse("done", {})
+
+        except Exception as e:
+            print(f"Erreur lors du streaming LangGraph : {e}")
+            yield _sse("error", {"detail": "Erreur interne du moteur RAG"})
+        finally:
+            if ctx:
+                ctx.__exit__(None, None, None)
+            if _langfuse:
+                _langfuse.flush()
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache"},
+    )
 
 
 @app.get("/", response_class=FileResponse)

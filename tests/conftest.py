@@ -10,6 +10,7 @@ from unittest.mock import MagicMock
 # --- Clés API fictives pour éviter les erreurs d'initialisation ---
 os.environ.setdefault("GOOGLE_API_KEY", "test-dummy-key")
 os.environ.setdefault("TAVILY_API_KEY", "test-dummy-key")
+os.environ.setdefault("APP_PASSWORD", "test-dummy-password")
 
 
 def _mock(name: str, **attrs) -> MagicMock:
