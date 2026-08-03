@@ -32,3 +32,9 @@ Thumbs.db
 
 # Outputs
 eval_results.json
+
+# Fichiers locaux (hors repo GitHub)
+cleanup-policy.json
+deploy.sh
+docs/
+qdrant/

@@ -219,8 +219,6 @@ This wasn't a model or retrieval change — every quality metric stayed identica
 
 Honest list of things I'd improve before claiming this is "done":
 
-- **Pin dependency versions** in `requirements.txt` (`langchain-google-genai` is currently unpinned — silent breaking changes are a real risk on rebuild).
-- **Set up a GCP budget alert at €20/month** to catch cost regressions early — I would have spotted the V2 cost issue much earlier with this in place.
 - **Improve PDF parsing** (move from `pdfplumber` to PyMuPDF or Docling for better table/structure preservation in regulatory PDFs).
 - **Improve context precision (0.696 → target 0.85+):** stricter LLM grading node, revisit chunk size for dense passages, per-query-type reranker threshold.
 - **Use Gemini 2.5 Flash Lite for routing/grading nodes** (10× cheaper than Flash) — only the final generation needs Flash quality.
