@@ -9,7 +9,8 @@ Couvre :
 - structure du graphe : nœuds et compilation
 """
 from unittest.mock import MagicMock, patch
-from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 
 EMPTY_CONFIG: RunnableConfig = {"configurable": {}, "callbacks": []}
@@ -53,7 +54,7 @@ class TestGradeDocuments:
     @patch("document_grader.get_config", return_value={"configurable": {}, "callbacks": []})
     @patch("document_grader.gemini")
     def test_doc_pertinent_route_vers_generate_answer(self, mock_gemini, _):
-        from document_grader import grade_documents, GradeDocuments
+        from document_grader import GradeDocuments, grade_documents
 
         mock_gemini.with_structured_output.return_value.invoke.return_value = \
             GradeDocuments(binary_score="yes")
@@ -67,7 +68,7 @@ class TestGradeDocuments:
     @patch("document_grader.get_config", return_value={"configurable": {}, "callbacks": []})
     @patch("document_grader.gemini")
     def test_doc_non_pertinent_premiere_tentative_route_vers_rewrite(self, mock_gemini, _):
-        from document_grader import grade_documents, GradeDocuments
+        from document_grader import GradeDocuments, grade_documents
 
         mock_gemini.with_structured_output.return_value.invoke.return_value = \
             GradeDocuments(binary_score="no")
@@ -81,7 +82,7 @@ class TestGradeDocuments:
     @patch("document_grader.get_config", return_value={"configurable": {}, "callbacks": []})
     @patch("document_grader.gemini")
     def test_doc_non_pertinent_apres_deux_tentatives_route_vers_search_web(self, mock_gemini, _):
-        from document_grader import grade_documents, GradeDocuments
+        from document_grader import GradeDocuments, grade_documents
 
         mock_gemini.with_structured_output.return_value.invoke.return_value = \
             GradeDocuments(binary_score="no")
@@ -96,7 +97,7 @@ class TestGradeDocuments:
     @patch("document_grader.get_config", return_value={"configurable": {}, "callbacks": []})
     @patch("document_grader.gemini")
     def test_comptage_tool_attempts_exact(self, mock_gemini, _):
-        from document_grader import grade_documents, GradeDocuments
+        from document_grader import GradeDocuments, grade_documents
 
         mock_gemini.with_structured_output.return_value.invoke.return_value = \
             GradeDocuments(binary_score="no")
@@ -244,7 +245,7 @@ class TestGenerateQueryOrRespond:
 
     @patch("query_pipeline.llm_with_tools")
     def test_system_prompt_inclus_en_premier(self, mock_llm):
-        from query_pipeline import generate_query_or_respond, SYSTEM_PROMPT
+        from query_pipeline import SYSTEM_PROMPT, generate_query_or_respond
 
         mock_llm.invoke.return_value = AIMessage(content="Réponse")
 
@@ -299,3 +300,116 @@ class TestGraphStructure:
         from assemble_graph import graph
 
         assert graph.checkpointer is not None
+
+
+# ──────────────────────────────────────────────
+# Régressions multi-tour (bugs corrigés)
+# ──────────────────────────────────────────────
+
+def make_multiturn_state() -> dict:
+    """Simule un 2e échange dans un thread persistant (MemorySaver)."""
+    return {
+        "messages": [
+            HumanMessage(content="ANCIENNE question du tour 1"),
+            AIMessage(
+                content="",
+                tool_calls=[{"id": "1", "name": "retrieve_context", "args": {"query": "x"}}],
+            ),
+            ToolMessage(content="contexte tour 1", tool_call_id="1"),
+            AIMessage(content="réponse du tour 1"),
+            HumanMessage(content="QUESTION du tour courant"),
+            AIMessage(
+                content="",
+                tool_calls=[{"id": "2", "name": "retrieve_context", "args": {"query": "y"}}],
+            ),
+            ToolMessage(content="contexte tour 2", tool_call_id="2"),
+        ]
+    }
+
+
+class TestGradeDocumentsMultiTour:
+    """Le grader doit raisonner sur le tour courant, pas sur le début du thread."""
+
+    @patch("document_grader.get_config", return_value={"configurable": {}, "callbacks": []})
+    @patch("document_grader.gemini")
+    def test_utilise_la_question_du_tour_courant(self, mock_gemini, _):
+        from document_grader import GradeDocuments, grade_documents
+
+        mock_gemini.with_structured_output.return_value.invoke.return_value = \
+            GradeDocuments(binary_score="yes")
+
+        grade_documents(make_multiturn_state())
+
+        prompt = mock_gemini.with_structured_output.return_value.invoke \
+            .call_args[0][0][0]["content"]
+        assert "QUESTION du tour courant" in prompt
+        assert "ANCIENNE question du tour 1" not in prompt
+
+    @patch("document_grader.get_config", return_value={"configurable": {}, "callbacks": []})
+    @patch("document_grader.gemini")
+    def test_compteur_tentatives_limite_au_tour_courant(self, mock_gemini, _):
+        from document_grader import GradeDocuments, grade_documents
+
+        mock_gemini.with_structured_output.return_value.invoke.return_value = \
+            GradeDocuments(binary_score="no")
+
+        # 1 seul ToolMessage au tour courant (les 2 du tour 1 ne comptent pas)
+        # → rewrite_question, pas search_web
+        assert grade_documents(make_multiturn_state()) == "rewrite_question"
+
+
+class TestRewriteQuestionMultiTour:
+    """La reformulation cible le dernier message humain, pas le ToolMessage."""
+
+    @patch("rewrite_question.gemini")
+    def test_reformule_le_message_humain_pas_le_tool_message(self, mock_gemini):
+        from rewrite_question import rewrite_question
+
+        mock_gemini.invoke.return_value = MagicMock(content="question reformulée")
+
+        state = make_state("Question originale", ["CONTEXTE_TOOL_A_PRESERVER"])
+        result = rewrite_question(state, EMPTY_CONFIG)
+
+        contents = [m.content for m in result["messages"]]
+        assert "question reformulée" in contents
+        assert "CONTEXTE_TOOL_A_PRESERVER" in contents  # le ToolMessage n'est plus écrasé
+        assert "Question originale" not in contents
+
+    @patch("rewrite_question.gemini")
+    def test_reformule_la_question_du_tour_courant(self, mock_gemini):
+        from rewrite_question import rewrite_question
+
+        mock_gemini.invoke.return_value = MagicMock(content="reformulée")
+
+        result = rewrite_question(make_multiturn_state(), EMPTY_CONFIG)
+
+        contents = [m.content for m in result["messages"]]
+        assert "ANCIENNE question du tour 1" in contents  # tour 1 inchangé
+        assert "QUESTION du tour courant" not in contents
+        assert "reformulée" in contents
+
+
+class TestWebSearchNode:
+    """Le fallback web doit chercher la question courante, avec un ID unique."""
+
+    @patch("assemble_graph.search_web")
+    def test_utilise_la_derniere_question_humaine(self, mock_search):
+        from assemble_graph import web_search_node
+
+        mock_search.invoke.return_value = "résultats web"
+
+        web_search_node(make_multiturn_state())
+
+        assert mock_search.invoke.call_args[0][0] == {"query": "QUESTION du tour courant"}
+
+    @patch("assemble_graph.search_web")
+    def test_tool_call_id_unique_entre_deux_recherches(self, mock_search):
+        from assemble_graph import web_search_node
+
+        mock_search.invoke.return_value = "r"
+        state = {"messages": [HumanMessage(content="q")]}
+
+        id1 = web_search_node(state)["messages"][0].tool_call_id
+        id2 = web_search_node(state)["messages"][0].tool_call_id
+
+        assert id1 != id2

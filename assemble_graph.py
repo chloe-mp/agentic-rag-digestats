@@ -1,22 +1,31 @@
-from langgraph.graph import StateGraph, START, END
-from langgraph.prebuilt import ToolNode, tools_condition
-from langgraph.graph import MessagesState
-from langgraph.checkpoint.memory import MemorySaver
-from langchain_core.messages import ToolMessage
+import uuid
 
-from query_pipeline import generate_query_or_respond
-from indexing_pipeline import retrieve_context
+from langchain_core.messages import ToolMessage
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, START, MessagesState, StateGraph
+from langgraph.prebuilt import ToolNode, tools_condition
+
 from document_grader import grade_documents
-from rewrite_question import rewrite_question
 from generate_answer import generate_answer
+from indexing_pipeline import retrieve_context
+from query_pipeline import generate_query_or_respond
+from rewrite_question import rewrite_question
 from web_tool import search_web
 
+
 def web_search_node(state: MessagesState):
-    question = state["messages"][0].content
+    # Dernier message humain = question courante (messages[0] serait la
+    # première question du thread — faux en multi-tour).
+    question = next(
+        (m.content for m in reversed(state["messages"]) if m.type == "human"),
+        "",
+    )
     results = search_web.invoke({"query": question})
     return {"messages": [ToolMessage(
         content=str(results),
-        tool_call_id="web_search",
+        # ID unique : un tool_call_id fixe créerait des doublons dans
+        # l'historique persistant (MemorySaver) à chaque recherche web.
+        tool_call_id=f"web_search_{uuid.uuid4().hex[:8]}",
         name="search_web"
     )]}
 
@@ -62,6 +71,7 @@ graph = workflow.compile(checkpointer=memory)
 
 if __name__ == "__main__":
     import sys
+
     from langchain_core.messages import HumanMessage
 
     question = " ".join(sys.argv[1:])

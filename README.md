@@ -56,34 +56,43 @@ Key design decisions you'll find documented below:
 User question
      │
      ▼
-[Reformulator]  ← rewrites the question to optimize retrieval
+[Agent planner]  ← decides: answer directly or call tools
+     │              (retrieve_context and/or search_web)
+     ▼
+[Retrieve]  ← hybrid retrieval: BM25 + dense + RRF + cross-encoder reranking
      │
      ▼
-[Retriever + Grader]  ← BM25 + dense + RRF + cross-encoder reranking
+[Grader]  ← does the retrieved context actually answer the question?
      │
-     ├── Score sufficient? ──Yes──▶ [Generator] ──▶ Structured answer
-     │
-     └── Score insufficient ──▶ [Web search (Tavily)] ──▶ [Generator] ──▶ Answer
+     ├── Relevant ───────────────▶ [Generator] ──▶ Structured answer
+     ├── Not relevant (1st try) ─▶ [Rewriter] ──▶ back to agent planner
+     └── Not relevant (2nd try) ─▶ [Web search (Tavily)] ──▶ [Generator]
 ```
 
-Implementation in `assemble_graph.py`:
+Implementation in `assemble_graph.py` (simplified — full routing in the file):
 
 ```python
-workflow = StateGraph(RAGState)
-workflow.add_node("reformulate", reformulate_question)
-workflow.add_node("retrieve", retrieve_and_score)
-workflow.add_node("web_search", web_search_fallback)
-workflow.add_node("generate", generate_answer)
+workflow = StateGraph(MessagesState)
+workflow.add_node(generate_query_or_respond)        # agent planner
+workflow.add_node("retrieve", ToolNode([retrieve_context, search_web]))
+workflow.add_node(rewrite_question)
+workflow.add_node(generate_answer)
+workflow.add_node("search_web", web_search_node)
 
-workflow.set_entry_point("reformulate")
-workflow.add_edge("reformulate", "retrieve")
+workflow.add_edge(START, "generate_query_or_respond")
 workflow.add_conditional_edges(
-    "retrieve",
-    route_after_retrieval,  # web_search if score too low, else generate
-    {"web_search": "web_search", "generate": "generate"},
+    "generate_query_or_respond", tools_condition,
+    {"tools": "retrieve", END: END},
 )
-workflow.add_edge("web_search", "generate")
-workflow.add_edge("generate", END)
+workflow.add_conditional_edges(
+    "retrieve", grade_documents,
+    {"generate_answer": "generate_answer",
+     "rewrite_question": "rewrite_question",
+     "search_web": "search_web"},
+)
+workflow.add_edge("search_web", "generate_answer")
+workflow.add_edge("rewrite_question", "generate_query_or_respond")
+workflow.add_edge("generate_answer", END)
 ```
 
 ---
@@ -101,15 +110,15 @@ Reformulated query
 [RRF — Reciprocal Rank Fusion]        → Merged ranking
        │
        ▼
-[Cross-encoder reranking]              → Fine ranking, threshold > 0.5
+[Cross-encoder reranking]              → Fine ranking of the top-10 candidates
        │
        ▼
-Top-10 final documents → passed to the LLM as context
+Top-5 final documents → passed to the LLM as context
 ```
 
 **Why hybrid + reranking, not just dense?**
 
-Regulatory text is full of exact references that semantic similarity gets wrong: *"arrêté du 9 avril 2018"*, *"CDC DIG"*, *"Règlement (CE) n° 1069/2009"*. BM25 catches these instantly. Dense catches paraphrases. RRF fuses the two rankings without having to normalize their scores (which live on incompatible scales). The cross-encoder then does fine-grained query×document attention on the ~50 candidates left, keeping the top 10 above a 0.5 threshold.
+Regulatory text is full of exact references that semantic similarity gets wrong: *"arrêté du 9 avril 2018"*, *"CDC DIG"*, *"Règlement (CE) n° 1069/2009"*. BM25 catches these instantly. Dense catches paraphrases. RRF fuses the two rankings without having to normalize their scores (which live on incompatible scales). The cross-encoder then does fine-grained query×document attention on the top-10 candidates, keeping the 5 best. An LLM grader node then checks whether that context can actually answer the question, and routes to a rewrite loop or web fallback if not.
 
 ---
 
@@ -122,7 +131,7 @@ Regulatory text is full of exact references that semantic similarity gets wrong:
 | **Context recall** | 0.893 | Retriever finds most of the necessary information |
 | **Context precision** | 0.696 | Some irrelevant chunks pass the reranker — the next thing I'd improve |
 
-**Honest note on context precision (0.696):** the reranker filters at threshold 0.5, which is sometimes too lenient. The fix isn't a single dial — it's a combination of (a) a stricter LLM-based grading node, (b) revisiting chunk size for dense regulatory passages, and (c) tuning the reranker threshold per query type. Listed as the highest-priority improvement in the next iteration.
+**Honest note on context precision (0.696):** the pipeline currently keeps a fixed top-5 after reranking, with no score threshold — marginal chunks can slip through. The fix isn't a single dial — it's a combination of (a) a reranker score threshold, (b) revisiting chunk size for dense regulatory passages, and (c) tuning the threshold per query type. Listed as the highest-priority improvement in the next iteration.
 
 The evaluator (RAGAS, using a separate Gemini instance) is **distinct from the generator** to avoid self-evaluation bias.
 
@@ -210,8 +219,6 @@ This wasn't a model or retrieval change — every quality metric stayed identica
 
 Honest list of things I'd improve before claiming this is "done":
 
-- **Pin dependency versions** in `requirements.txt` (`langchain-google-genai` is currently unpinned — silent breaking changes are a real risk on rebuild).
-- **Set up a GCP budget alert at €20/month** to catch cost regressions early — I would have spotted the V2 cost issue much earlier with this in place.
 - **Improve PDF parsing** (move from `pdfplumber` to PyMuPDF or Docling for better table/structure preservation in regulatory PDFs).
 - **Improve context precision (0.696 → target 0.85+):** stricter LLM grading node, revisit chunk size for dense passages, per-query-type reranker threshold.
 - **Use Gemini 2.5 Flash Lite for routing/grading nodes** (10× cheaper than Flash) — only the final generation needs Flash quality.
@@ -258,13 +265,14 @@ uvicorn app:app --reload --port 8080
 ├── indexing_pipeline.py     # Hybrid RAG (BGE-M3 + BM25 + Qdrant)
 ├── document_grader.py       # Relevance scoring of retrieved docs
 ├── generate_answer.py       # Final answer generation (system prompt + context)
-├── query_pipeline.py        # Routing: direct generation or tool path
+├── query_pipeline.py        # Agent planner: direct answer or tool calls
 ├── rewrite_question.py      # Question reformulation for retrieval
 ├── web_tool.py              # Tavily fallback (web search)
-├── models.py                # Pydantic state models
-├── eval.py                  # RAGAS evaluation harness
+├── models.py                # Shared LLM instance
+├── static/index.html        # Chat UI
+├── evaluation/              # RAGAS evaluation harness + Q&A dataset
+├── tests/                   # Unit + multi-turn regression tests
 ├── service.yaml             # Cloud Run deployment config
-├── cleanup-policy.json      # Artifact Registry retention policy
 ├── Dockerfile
 ├── requirements.txt
 └── .github/workflows/deploy.yml

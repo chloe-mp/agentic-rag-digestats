@@ -7,7 +7,6 @@ metadata:
     cloud.googleapis.com/location: europe-west1
   annotations:
     run.googleapis.com/ingress: all
-    run.googleapis.com/maxScale: "10"
 spec:
   template:
     metadata:
@@ -70,9 +69,12 @@ spec:
             cpu: "2"
             memory: 8Gi
         startupProbe:
-          timeoutSeconds: 240
-          periodSeconds: 240
-          failureThreshold: 3
+          # Budget ~3 min (cold start 30-60s avec image ~1 GB), détection
+          # d'un échec en ~30s. Avant : 240s x 3 = jusqu'à 12 min aveugle,
+          # hérité de l'ère des cold starts de 2-5 min.
+          timeoutSeconds: 5
+          periodSeconds: 10
+          failureThreshold: 18
           tcpSocket:
             port: 8080
   traffic:

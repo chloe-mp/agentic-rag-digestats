@@ -1,20 +1,19 @@
-import os
-import re
-import sys
 import glob
-import torch
+import os
+import sys
+import warnings
 from hashlib import md5
 from pathlib import Path
+
+import torch
 from dotenv import load_dotenv
-from langchain_core.documents import Document
+from FlagEmbedding import BGEM3FlagModel
 from langchain.tools import tool
 from langchain_community.retrievers import BM25Retriever
-from qdrant_client import QdrantClient
-from qdrant_client import models
-from qdrant_client.models import Distance, VectorParams, SparseVectorParams, Modifier
+from langchain_core.documents import Document
+from qdrant_client import QdrantClient, models
+from qdrant_client.models import Distance, Modifier, SparseVectorParams, VectorParams
 from sentence_transformers import CrossEncoder
-from FlagEmbedding import BGEM3FlagModel
-import warnings
 
 os.environ["USER_AGENT"] = "regulatory-rag-bot/1.0"
 load_dotenv()
@@ -28,9 +27,6 @@ else:
 
 BASE_DIR = Path(os.environ.get("APP_BASE_DIR", "."))
 PDF_DIR = BASE_DIR / "docs"
-
-
-WEB_URLS = []
 
 print(f"[INIT] Chargement des modeles sur {DEVICE}...")
 
@@ -75,18 +71,19 @@ else:
     )
     _qdrant_client = None
 
-if _qdrant_client is not None:
-    if not any(c.name == "reglementation_digestats" for c in _qdrant_client.get_collections().collections):
-        _qdrant_client.create_collection(
-            collection_name="reglementation_digestats",
-            vectors_config={
-                "dense": VectorParams(size=1024, distance=Distance.COSINE)
-            },
-            sparse_vectors_config={
-                "sparse": SparseVectorParams(modifier=Modifier.IDF)
-            }
-        )
-        print("[INIT] Collection 'reglementation_digestats' créée.")
+if _qdrant_client is not None and not any(
+    c.name == "reglementation_digestats" for c in _qdrant_client.get_collections().collections
+):
+    _qdrant_client.create_collection(
+        collection_name="reglementation_digestats",
+        vectors_config={
+            "dense": VectorParams(size=1024, distance=Distance.COSINE)
+        },
+        sparse_vectors_config={
+            "sparse": SparseVectorParams(modifier=Modifier.IDF)
+        }
+    )
+    print("[INIT] Collection 'reglementation_digestats' créée.")
 
 _reranker = CrossEncoder("BAAI/bge-reranker-v2-m3", device=DEVICE)
 
@@ -98,7 +95,8 @@ if _qdrant_client is not None:
             limit=100_000,
             with_payload=True,
         )
-    except Exception:
+    except Exception as e:
+        print(f"[WARN] Impossible de charger les points Qdrant pour BM25 : {e}")
         _qdrant_points = []
 
 print(f"[INIT] Pret. Device: {DEVICE}, Chunks: {len(_qdrant_points)}")
@@ -114,16 +112,6 @@ if _qdrant_points:
     ]
     _bm25_retriever = BM25Retriever.from_documents(_all_docs_for_bm25)
     _bm25_retriever.k = 30
-
-
-def clean_document(text):
-    lines = text.split("\n")
-    lines = [line.strip() for line in lines if len(line.strip()) > 20]
-    text = "\n".join(lines)
-    text = re.sub(
-        r"Naviguer dans le sommaire.*|Mentions legales.*", "", text, flags=re.IGNORECASE
-    )
-    return text.strip()
 
 
 def load_pdf_with_tables(pdf_path):
@@ -149,7 +137,6 @@ def load_pdf_with_tables(pdf_path):
 
 
 def index_documents():
-    from langchain_community.document_loaders import WebBaseLoader
     from langchain_text_splitters import RecursiveCharacterTextSplitter
 
     if any(c.name == "reglementation_digestats" for c in _qdrant_client.get_collections().collections):
@@ -166,14 +153,6 @@ def index_documents():
     print(f"[INDEX] {len(pdf_paths)} PDFs trouves dans {PDF_DIR}")
     for path in pdf_paths:
         all_docs.extend(load_pdf_with_tables(path))
-
-    if WEB_URLS:
-        loader = WebBaseLoader(WEB_URLS)
-        web_docs = loader.load()
-        for d in web_docs:
-            d.page_content = clean_document(d.page_content)
-            if len(d.page_content) > 50:
-                all_docs.append(d)
 
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1500,
@@ -199,7 +178,7 @@ def index_documents():
                 vector={
                     "dense": dense_vecs[j].tolist(),
                     "sparse": models.SparseVector(
-                        indices=[int(k) for k in sparse_vecs[j].keys()],
+                        indices=[int(k) for k in sparse_vecs[j]],
                         values=list(sparse_vecs[j].values())
                     )
                 },
@@ -254,7 +233,7 @@ def retrieve_context(query: str):
     query_emb = bge_m3_embed(query)
     query_dense = query_emb["dense"][0].tolist()
     query_sparse = models.SparseVector(
-        indices=[int(k) for k in query_emb["sparse"][0].keys()],
+        indices=[int(k) for k in query_emb["sparse"][0]],
         values=list(query_emb["sparse"][0].values())
     )
 
@@ -297,76 +276,9 @@ def retrieve_context(query: str):
     )
 
 
-def evaluate_rag():
-    import json
-    from tqdm import tqdm
-    from langchain_huggingface import HuggingFaceEmbeddings
-    from ragas import evaluate, EvaluationDataset, SingleTurnSample
-    from ragas.metrics import Faithfulness, AnswerRelevancy, ContextPrecision, ContextRecall
-    from ragas.llms import LangchainLLMWrapper
-    from ragas.embeddings import LangchainEmbeddingsWrapper
-    from langchain_google_genai import ChatGoogleGenerativeAI
-
-    dataset_path = BASE_DIR / "evaluation/question_answers.json"
-    results_path = BASE_DIR / "evaluation/ragas_results.json"
-
-    with open(dataset_path, "r", encoding="utf-8") as f:
-        dataset = json.load(f)
-
-    llm = LangchainLLMWrapper(
-        ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
-            google_api_key=os.getenv("GOOGLE_API_KEY"),
-        )
-    )
-    emb = LangchainEmbeddingsWrapper(
-        HuggingFaceEmbeddings(
-            model_name="BAAI/bge-m3", encode_kwargs={"normalize_embeddings": True}
-        )
-    )
-
-    samples = []
-    for entry in tqdm(dataset, desc="RAGAS eval"):
-        question = entry["question"]
-        ground_truth = entry.get("ground_truth", "")
-
-        content, docs = retrieve_context.func(question)
-        contexts = [d.page_content for d in docs] if docs else ["N/A"]
-
-        prompt = f"Question: {question}\n\nContextes:\n{content}\n\nRéponds en français de façon concise."
-        _llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=os.getenv("GOOGLE_API_KEY"))
-        answer = _llm.invoke(prompt).content
-
-        samples.append(
-            SingleTurnSample(
-                user_input=question,
-                response=answer,
-                retrieved_contexts=contexts,
-                reference=ground_truth,
-            )
-        )
-
-    metrics = [
-        Faithfulness(llm=llm),
-        AnswerRelevancy(llm=llm, embeddings=emb),
-        ContextPrecision(llm=llm),
-        ContextRecall(llm=llm),
-    ]
-
-    results = evaluate(dataset=EvaluationDataset(samples=samples), metrics=metrics)
-    print("\nRésultats RAGAS :")
-    print(results)
-
-    df = results.to_pandas()
-    df.to_json(results_path, orient="records", force_ascii=False, indent=4)
-    print(f"Sauvegardé dans {results_path}")
-
-
 if __name__ == "__main__":
     if "--reindex" in sys.argv:
         index_documents()
-    elif "--evaluate" in sys.argv:
-        evaluate_rag()
     elif "--query" in sys.argv:
         idx = sys.argv.index("--query")
         question = " ".join(sys.argv[idx + 1:])

@@ -1,25 +1,26 @@
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import MessagesState
+
 from models import gemini
 
 REWRITE_PROMPT = (
-    "Tu es un ingénieur expert en réglementation agricole. "
-    "Reformule la question suivante pour optimiser une recherche dans une base de données de règlements (Règlement 1069/2009, 142/2011, etc.).\n\n"
-    "QUESTION ORIGINALE : {question}\n\n"
-    "CONSIGNE : Génère une requête technique concise incluant les mots-clés juridiques pertinents."
+    "Reformule cette question en une seule phrase technique pour une "
+    "recherche documentaire : {question}"
 )
 
 
 def rewrite_question(state: MessagesState, config: RunnableConfig):
-    last_human_message = state["messages"][-1].content
+    # On reformule le dernier message HUMAIN — pas messages[-1], qui après
+    # le nœud retrieve est un ToolMessage (le contexte récupéré, pas la question).
+    last_human_message = next(
+        m for m in reversed(state["messages"]) if m.type == "human"
+    )
 
-    # On demande une reformulation SIMPLE, pas un dictionnaire de mots-clés
-    REWRITE_PROMPT = "Reformule cette question en une seule phrase technique pour une recherche documentaire : {question}"
-
-    prompt = REWRITE_PROMPT.format(question=last_human_message)
+    prompt = REWRITE_PROMPT.format(question=last_human_message.content)
     response = gemini.invoke([{"role": "user", "content": prompt}], config=config)
 
-    # ASTUCE : On remplace le dernier message par la version optimisée
+    # ASTUCE : On remplace le message humain par la version optimisée
     # au lieu d'en ajouter un nouveau, pour ne pas perdre l'agent.
-    state["messages"][-1].content = response.content
+    # Les IDs étant inchangés, add_messages met à jour en place.
+    last_human_message.content = response.content
     return {"messages": state["messages"]}

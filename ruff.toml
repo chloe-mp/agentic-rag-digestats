@@ -1,0 +1,17 @@
+target-version = "py312"
+
+[lint]
+# Règles choisies explicitement : comportement stable quelle que soit la
+# version de ruff. Ajouter une règle = décision d'équipe, pas surprise d'upgrade.
+select = [
+    "E4",  # pycodestyle : formatage logique (indentation, comparaisons)
+    "E7",  # pycodestyle : statements mal formés
+    "E9",  # pycodestyle : erreurs de syntaxe runtime
+    "F",   # pyflakes : imports inutilisés, noms indéfinis, vraies erreurs
+    "I",   # isort : tri des imports
+    "SIM", # flake8-simplify : ifs imbriqués, expressions simplifiables
+]
+
+[lint.per-file-ignores]
+# sys.path doit précéder les imports du projet dans ce script standalone
+"evaluation/rag_eval.py" = ["E402"]
