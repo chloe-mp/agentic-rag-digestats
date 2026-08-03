@@ -91,6 +91,10 @@ packaging==26.2
 pandas==3.0.2
 pdfminer.six==20251230
 pdfplumber==0.11.9
+# NE PAS SUPPRIMER : peft n'est pas importé par notre code, mais FlagEmbedding 1.2.11
+# fait "from peft import PeftModel" dans son __init__ → l'import de BGEM3FlagModel
+# plante sans lui. Dépendance runtime transitive, pas du code mort.
+peft==0.19.1
 pillow==12.2.0
 portalocker==3.2.0
 propcache==0.4.1
