@@ -1,19 +1,19 @@
+import glob
 import os
 import sys
-import glob
-import torch
+import warnings
 from hashlib import md5
 from pathlib import Path
+
+import torch
 from dotenv import load_dotenv
-from langchain_core.documents import Document
+from FlagEmbedding import BGEM3FlagModel
 from langchain.tools import tool
 from langchain_community.retrievers import BM25Retriever
-from qdrant_client import QdrantClient
-from qdrant_client import models
-from qdrant_client.models import Distance, VectorParams, SparseVectorParams, Modifier
+from langchain_core.documents import Document
+from qdrant_client import QdrantClient, models
+from qdrant_client.models import Distance, Modifier, SparseVectorParams, VectorParams
 from sentence_transformers import CrossEncoder
-from FlagEmbedding import BGEM3FlagModel
-import warnings
 
 os.environ["USER_AGENT"] = "regulatory-rag-bot/1.0"
 load_dotenv()
@@ -71,18 +71,19 @@ else:
     )
     _qdrant_client = None
 
-if _qdrant_client is not None:
-    if not any(c.name == "reglementation_digestats" for c in _qdrant_client.get_collections().collections):
-        _qdrant_client.create_collection(
-            collection_name="reglementation_digestats",
-            vectors_config={
-                "dense": VectorParams(size=1024, distance=Distance.COSINE)
-            },
-            sparse_vectors_config={
-                "sparse": SparseVectorParams(modifier=Modifier.IDF)
-            }
-        )
-        print("[INIT] Collection 'reglementation_digestats' créée.")
+if _qdrant_client is not None and not any(
+    c.name == "reglementation_digestats" for c in _qdrant_client.get_collections().collections
+):
+    _qdrant_client.create_collection(
+        collection_name="reglementation_digestats",
+        vectors_config={
+            "dense": VectorParams(size=1024, distance=Distance.COSINE)
+        },
+        sparse_vectors_config={
+            "sparse": SparseVectorParams(modifier=Modifier.IDF)
+        }
+    )
+    print("[INIT] Collection 'reglementation_digestats' créée.")
 
 _reranker = CrossEncoder("BAAI/bge-reranker-v2-m3", device=DEVICE)
 
@@ -177,7 +178,7 @@ def index_documents():
                 vector={
                     "dense": dense_vecs[j].tolist(),
                     "sparse": models.SparseVector(
-                        indices=[int(k) for k in sparse_vecs[j].keys()],
+                        indices=[int(k) for k in sparse_vecs[j]],
                         values=list(sparse_vecs[j].values())
                     )
                 },
@@ -232,7 +233,7 @@ def retrieve_context(query: str):
     query_emb = bge_m3_embed(query)
     query_dense = query_emb["dense"][0].tolist()
     query_sparse = models.SparseVector(
-        indices=[int(k) for k in query_emb["sparse"][0].keys()],
+        indices=[int(k) for k in query_emb["sparse"][0]],
         values=list(query_emb["sparse"][0].values())
     )
 

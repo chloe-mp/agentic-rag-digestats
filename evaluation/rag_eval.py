@@ -8,9 +8,10 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from assemble_graph import graph
-from tqdm import tqdm
 from dotenv import load_dotenv
+from tqdm import tqdm
+
+from assemble_graph import graph
 
 load_dotenv()
 
@@ -49,23 +50,20 @@ def collect_responses():
         try:
             for chunk in graph.stream(inputs, config=config):
                 for node, update in chunk.items():
-                    if node == "retrieve":
-                        if "messages" in update:
-                            last_msg = update["messages"][-1]
-                            if hasattr(last_msg, "artifact") and last_msg.artifact:
-                                for doc in last_msg.artifact:
-                                    if doc.page_content not in contexts:
-                                        contexts.append(doc.page_content)
+                    if node == "retrieve" and "messages" in update:
+                        last_msg = update["messages"][-1]
+                        if hasattr(last_msg, "artifact") and last_msg.artifact:
+                            for doc in last_msg.artifact:
+                                if doc.page_content not in contexts:
+                                    contexts.append(doc.page_content)
 
-                    if node == "search_web":
-                        if "messages" in update:
-                            content = update["messages"][-1].content
-                            if content not in contexts:
-                                contexts.append(content)
+                    if node == "search_web" and "messages" in update:
+                        content = update["messages"][-1].content
+                        if content not in contexts:
+                            contexts.append(content)
 
-                    if node == "generate_answer":
-                        if "messages" in update:
-                            answer = update["messages"][-1].content
+                    if node == "generate_answer" and "messages" in update:
+                        answer = update["messages"][-1].content
 
             results.append(
                 {
@@ -85,17 +83,17 @@ def collect_responses():
 
 
 def run_ragas(results):
-    from ragas import evaluate, EvaluationDataset
+    from langchain_huggingface import HuggingFaceEmbeddings
+    from ragas import EvaluationDataset, SingleTurnSample, evaluate
+    from ragas.embeddings import LangchainEmbeddingsWrapper
+    from ragas.llms import LangchainLLMWrapper
     from ragas.metrics import (
-        faithfulness,
         answer_relevancy,
         context_precision,
         context_recall,
+        faithfulness,
     )
-    from ragas.llms import LangchainLLMWrapper
-    from ragas.embeddings import LangchainEmbeddingsWrapper
-    from ragas import SingleTurnSample
-    from langchain_huggingface import HuggingFaceEmbeddings
+
     from models import gemini
 
     valid_results = [

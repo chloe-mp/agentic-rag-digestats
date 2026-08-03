@@ -1,17 +1,17 @@
 import uuid
 
-from langgraph.graph import StateGraph, START, END
-from langgraph.prebuilt import ToolNode, tools_condition
-from langgraph.graph import MessagesState
-from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import ToolMessage
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, START, MessagesState, StateGraph
+from langgraph.prebuilt import ToolNode, tools_condition
 
-from query_pipeline import generate_query_or_respond
-from indexing_pipeline import retrieve_context
 from document_grader import grade_documents
-from rewrite_question import rewrite_question
 from generate_answer import generate_answer
+from indexing_pipeline import retrieve_context
+from query_pipeline import generate_query_or_respond
+from rewrite_question import rewrite_question
 from web_tool import search_web
+
 
 def web_search_node(state: MessagesState):
     # Dernier message humain = question courante (messages[0] serait la
@@ -71,6 +71,7 @@ graph = workflow.compile(checkpointer=memory)
 
 if __name__ == "__main__":
     import sys
+
     from langchain_core.messages import HumanMessage
 
     question = " ".join(sys.argv[1:])

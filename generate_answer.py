@@ -1,6 +1,7 @@
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import MessagesState
+
 from models import gemini
 
 GENERATE_PROMPT = (

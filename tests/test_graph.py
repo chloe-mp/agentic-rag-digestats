@@ -9,7 +9,8 @@ Couvre :
 - structure du graphe : nœuds et compilation
 """
 from unittest.mock import MagicMock, patch
-from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 
 EMPTY_CONFIG: RunnableConfig = {"configurable": {}, "callbacks": []}
@@ -53,7 +54,7 @@ class TestGradeDocuments:
     @patch("document_grader.get_config", return_value={"configurable": {}, "callbacks": []})
     @patch("document_grader.gemini")
     def test_doc_pertinent_route_vers_generate_answer(self, mock_gemini, _):
-        from document_grader import grade_documents, GradeDocuments
+        from document_grader import GradeDocuments, grade_documents
 
         mock_gemini.with_structured_output.return_value.invoke.return_value = \
             GradeDocuments(binary_score="yes")
@@ -67,7 +68,7 @@ class TestGradeDocuments:
     @patch("document_grader.get_config", return_value={"configurable": {}, "callbacks": []})
     @patch("document_grader.gemini")
     def test_doc_non_pertinent_premiere_tentative_route_vers_rewrite(self, mock_gemini, _):
-        from document_grader import grade_documents, GradeDocuments
+        from document_grader import GradeDocuments, grade_documents
 
         mock_gemini.with_structured_output.return_value.invoke.return_value = \
             GradeDocuments(binary_score="no")
@@ -81,7 +82,7 @@ class TestGradeDocuments:
     @patch("document_grader.get_config", return_value={"configurable": {}, "callbacks": []})
     @patch("document_grader.gemini")
     def test_doc_non_pertinent_apres_deux_tentatives_route_vers_search_web(self, mock_gemini, _):
-        from document_grader import grade_documents, GradeDocuments
+        from document_grader import GradeDocuments, grade_documents
 
         mock_gemini.with_structured_output.return_value.invoke.return_value = \
             GradeDocuments(binary_score="no")
@@ -96,7 +97,7 @@ class TestGradeDocuments:
     @patch("document_grader.get_config", return_value={"configurable": {}, "callbacks": []})
     @patch("document_grader.gemini")
     def test_comptage_tool_attempts_exact(self, mock_gemini, _):
-        from document_grader import grade_documents, GradeDocuments
+        from document_grader import GradeDocuments, grade_documents
 
         mock_gemini.with_structured_output.return_value.invoke.return_value = \
             GradeDocuments(binary_score="no")
@@ -244,7 +245,7 @@ class TestGenerateQueryOrRespond:
 
     @patch("query_pipeline.llm_with_tools")
     def test_system_prompt_inclus_en_premier(self, mock_llm):
-        from query_pipeline import generate_query_or_respond, SYSTEM_PROMPT
+        from query_pipeline import SYSTEM_PROMPT, generate_query_or_respond
 
         mock_llm.invoke.return_value = AIMessage(content="Réponse")
 
@@ -332,7 +333,7 @@ class TestGradeDocumentsMultiTour:
     @patch("document_grader.get_config", return_value={"configurable": {}, "callbacks": []})
     @patch("document_grader.gemini")
     def test_utilise_la_question_du_tour_courant(self, mock_gemini, _):
-        from document_grader import grade_documents, GradeDocuments
+        from document_grader import GradeDocuments, grade_documents
 
         mock_gemini.with_structured_output.return_value.invoke.return_value = \
             GradeDocuments(binary_score="yes")
@@ -347,7 +348,7 @@ class TestGradeDocumentsMultiTour:
     @patch("document_grader.get_config", return_value={"configurable": {}, "callbacks": []})
     @patch("document_grader.gemini")
     def test_compteur_tentatives_limite_au_tour_courant(self, mock_gemini, _):
-        from document_grader import grade_documents, GradeDocuments
+        from document_grader import GradeDocuments, grade_documents
 
         mock_gemini.with_structured_output.return_value.invoke.return_value = \
             GradeDocuments(binary_score="no")

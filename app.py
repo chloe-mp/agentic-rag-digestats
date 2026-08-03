@@ -1,14 +1,14 @@
+import hmac
 import os
 import uuid
-import hmac
 from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from assemble_graph import graph
-from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -109,22 +109,19 @@ async def chat(req: ChatRequest):
             ctx.__enter__()
         for chunk in graph.stream(inputs, config=config):
             for node, update in chunk.items():
-                if node == "retrieve":
-                    if "messages" in update:
-                        last_msg = update["messages"][-1]
-                        if hasattr(last_msg, "artifact") and last_msg.artifact:
-                            for doc in last_msg.artifact:
-                                src = doc.metadata.get("source", "Source inconnue")
-                                if src not in sources:
-                                    sources.append(src)
+                if node == "retrieve" and "messages" in update:
+                    last_msg = update["messages"][-1]
+                    if hasattr(last_msg, "artifact") and last_msg.artifact:
+                        for doc in last_msg.artifact:
+                            src = doc.metadata.get("source", "Source inconnue")
+                            if src not in sources:
+                                sources.append(src)
 
-                if node == "search_web":
-                    if "web_search" not in sources:
-                        sources.append("Recherche Web")
+                if node == "search_web" and "web_search" not in sources:
+                    sources.append("Recherche Web")
 
-                if node == "generate_answer":
-                    if "messages" in update:
-                        answer = update["messages"][-1].content
+                if node == "generate_answer" and "messages" in update:
+                    answer = update["messages"][-1].content
 
         if not answer:
             answer = "Désolé, je n'ai pas pu générer de réponse."

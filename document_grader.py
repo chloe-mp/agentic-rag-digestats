@@ -1,9 +1,11 @@
-from pydantic import BaseModel, Field
 from typing import Literal
-from langgraph.graph import MessagesState
+
 from langchain_core.messages import convert_to_messages
 from langchain_core.runnables import RunnableConfig
 from langgraph.config import get_config
+from langgraph.graph import MessagesState
+from pydantic import BaseModel, Field
+
 from models import gemini
 
 GRADE_PROMPT = (

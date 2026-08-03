@@ -28,6 +28,9 @@ jobs:
 
       - name: Lint with Ruff
         uses: astral-sh/ruff-action@v3
+        with:
+          version: "0.16.1"  # version pinnée : pas de surprise lors d'une upgrade de ruff
+          args: "check --config ruff.toml"
 
       - name: Set up Python
         uses: actions/setup-python@v5
