@@ -45,6 +45,7 @@
         .loader span { width: 7px; height: 7px; background: #1a5c2e; border-radius: 50%; animation: bounce 1.2s infinite ease-in-out; }
         .loader span:nth-child(2) { animation-delay: 0.2s; }
         .loader span:nth-child(3) { animation-delay: 0.4s; }
+        #loader-status { font-size: 12px; color: #999; margin-left: 8px; font-style: normal; }
         @keyframes bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
     </style>
 </head>
@@ -107,9 +108,22 @@
         function addLoader() {
             const d = document.createElement('div');
             d.className = 'loader'; d.id = 'loader';
-            d.innerHTML = '<span></span><span></span><span></span>';
+            d.innerHTML = '<span></span><span></span><span></span><em id="loader-status">Connexion…</em>';
             container.appendChild(d);
             container.scrollTop = container.scrollHeight;
+        }
+
+        function updateLoader(msg) {
+            const s = document.getElementById('loader-status');
+            if (s) s.textContent = msg;
+        }
+
+        function appendSources(div, sources) {
+            if (sources.length === 0) return;
+            const s = document.createElement('div');
+            s.className = 'sources';
+            s.textContent = 'Sources : ' + sources.join(', ');
+            div.appendChild(s);
         }
 
         function removeLoader() {
@@ -143,6 +157,10 @@
             input.value = ''; btn.disabled = true;
             addLoader();
 
+            let botDiv = null;
+            let answerText = '';
+            let sources = [];
+
             try {
                 const res = await fetch('/api/chat', {
                     method: 'POST',
@@ -150,22 +168,71 @@
                     body: JSON.stringify({ question, thread_id: threadId, password: currentPassword })
                 });
 
-                removeLoader();
-
                 if (res.status === 401) {
+                    removeLoader();
                     alert("Session expirée ou mauvais mot de passe.");
                     location.reload(); return;
                 }
 
-                if (!res.ok) {
+                if (!res.ok || !res.body) {
+                    removeLoader();
                     const err = await res.json().catch(() => ({}));
                     addMsg(`Erreur serveur (${res.status}) : ${err.detail || 'réponse inattendue'}`, 'bot-msg');
                     return;
                 }
 
-                const data = await res.json();
-                threadId = data.thread_id;
-                addMsg(data.answer || 'Réponse vide.', 'bot-msg', data.sources);
+                // Lecture du flux SSE : statuts de progression puis tokens de la réponse
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+
+                    const events = buffer.split('\n\n');
+                    buffer = events.pop();  // conserve le fragment incomplet
+
+                    for (const evt of events) {
+                        const lines = evt.split('\n');
+                        const eventLine = lines.find(l => l.startsWith('event:'));
+                        const dataLine = lines.find(l => l.startsWith('data:'));
+                        if (!eventLine || !dataLine) continue;
+
+                        const event = eventLine.slice(6).trim();
+                        const payload = JSON.parse(dataLine.slice(5).trim());
+
+                        if (event === 'meta') {
+                            threadId = payload.thread_id;
+                        } else if (event === 'status') {
+                            updateLoader(payload.message);
+                        } else if (event === 'sources') {
+                            sources = payload.sources;
+                        } else if (event === 'token') {
+                            if (!botDiv) {
+                                removeLoader();
+                                botDiv = document.createElement('div');
+                                botDiv.className = 'message bot-msg';
+                                container.appendChild(botDiv);
+                            }
+                            answerText += payload.content;
+                            botDiv.innerHTML = renderMarkdown(answerText);
+                            container.scrollTop = container.scrollHeight;
+                        } else if (event === 'error') {
+                            removeLoader();
+                            addMsg(`Erreur serveur : ${payload.detail || 'erreur inconnue'}`, 'bot-msg');
+                            return;
+                        }
+                    }
+                }
+
+                removeLoader();
+                if (botDiv) {
+                    appendSources(botDiv, sources);
+                } else {
+                    addMsg('Réponse vide.', 'bot-msg');
+                }
             } catch (err) {
                 removeLoader();
                 addMsg(`Erreur de connexion : ${err.message || 'réseau indisponible'}`, 'bot-msg');

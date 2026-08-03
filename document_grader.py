@@ -6,7 +6,7 @@ from langgraph.config import get_config
 from langgraph.graph import MessagesState
 from pydantic import BaseModel, Field
 
-from models import gemini
+from models import gemini_lite
 
 GRADE_PROMPT = (
     "You are a grader assessing whether a retrieved document can DIRECTLY ANSWER a user question.\n\n"
@@ -49,7 +49,7 @@ def grade_documents(
 
     config: RunnableConfig = get_config()
     prompt = GRADE_PROMPT.format(question=question, context=context)
-    response = gemini.with_structured_output(GradeDocuments).invoke(
+    response = gemini_lite.with_structured_output(GradeDocuments).invoke(
         [{"role": "user", "content": prompt}], config=config
     )
 

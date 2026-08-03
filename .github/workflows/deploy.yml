@@ -38,7 +38,7 @@ jobs:
           python-version: '3.12'  # aligné sur le Dockerfile (python:3.12-slim)
 
       - name: Install test dependencies
-        run: pip install langgraph langchain langchain-core langchain-community pytest
+        run: pip install langgraph langchain langchain-core langchain-community pytest fastapi httpx
 
       - name: Run unit tests
         run: python -m pytest tests/ -v
