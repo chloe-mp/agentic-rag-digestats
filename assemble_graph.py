@@ -1,3 +1,5 @@
+import uuid
+
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.graph import MessagesState
@@ -12,11 +14,18 @@ from generate_answer import generate_answer
 from web_tool import search_web
 
 def web_search_node(state: MessagesState):
-    question = state["messages"][0].content
+    # Dernier message humain = question courante (messages[0] serait la
+    # première question du thread — faux en multi-tour).
+    question = next(
+        (m.content for m in reversed(state["messages"]) if m.type == "human"),
+        "",
+    )
     results = search_web.invoke({"query": question})
     return {"messages": [ToolMessage(
         content=str(results),
-        tool_call_id="web_search",
+        # ID unique : un tool_call_id fixe créerait des doublons dans
+        # l'historique persistant (MemorySaver) à chaque recherche web.
+        tool_call_id=f"web_search_{uuid.uuid4().hex[:8]}",
         name="search_web"
     )]}
 

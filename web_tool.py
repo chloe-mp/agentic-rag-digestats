@@ -1,14 +1,11 @@
 from dotenv import load_dotenv
 from langchain.tools import tool
-
-# On utilise l'import communautaire qui est le plus stable
-from langchain_community.tools.tavily_search import TavilySearchResults
+from langchain_tavily import TavilySearch
 
 load_dotenv()
 
-# On initialise l'outil
 # Si tu as une erreur ici, c'est que la clé API est manquante dans ton .env
-tavily_tool = TavilySearchResults(k=3)
+tavily_tool = TavilySearch(max_results=3)
 
 
 @tool

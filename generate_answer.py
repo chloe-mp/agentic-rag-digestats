@@ -1,4 +1,4 @@
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import MessagesState
 from models import gemini
@@ -51,12 +51,10 @@ def generate_answer(state: MessagesState, config: RunnableConfig):
     full_prompt = GENERATE_PROMPT.format(question=question, context=context)
 
     # 4. Invocation
-    # On utilise SystemMessage pour les instructions et HumanMessage pour déclencher
+    # GENERATE_PROMPT contient déjà la persona et les consignes : pas de
+    # SystemMessage additionnel (risque de personas contradictoires).
     response = gemini.invoke(
-        [
-            SystemMessage(content="Tu es un assistant juridique spécialisé."),
-            HumanMessage(content=full_prompt),
-        ],
+        [HumanMessage(content=full_prompt)],
         config=config,
     )
 

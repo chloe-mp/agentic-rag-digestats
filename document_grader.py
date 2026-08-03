@@ -28,11 +28,22 @@ class GradeDocuments(BaseModel):
 def grade_documents(
     state: MessagesState,
 ) -> Literal["generate_answer", "rewrite_question", "search_web"]:
-    question = state["messages"][0].content
+    # La question courante = dernier message humain (pas messages[0], qui est la
+    # PREMIÈRE question du thread — faux en multi-tour avec le checkpointer).
+    question = next(
+        (m.content for m in reversed(state["messages"]) if m.type == "human"),
+        "",
+    )
     context = state["messages"][-1].content
 
-    # Compter combien de fois on a déjà fait retrieve
-    tool_attempts = sum(1 for m in state["messages"] if m.type == "tool")
+    # Compter les tentatives de retrieval du tour courant uniquement :
+    # on remonte l'historique jusqu'au dernier message humain.
+    tool_attempts = 0
+    for m in reversed(state["messages"]):
+        if m.type == "human":
+            break
+        if m.type == "tool":
+            tool_attempts += 1
 
     config: RunnableConfig = get_config()
     prompt = GRADE_PROMPT.format(question=question, context=context)

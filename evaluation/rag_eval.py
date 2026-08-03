@@ -1,18 +1,20 @@
-from assemble_graph import graph
 import json
 import sys
 from hashlib import md5
 from pathlib import Path
+
+# sys.path AVANT les imports du projet, sinon ils échouent quand on lance
+# le script depuis la racine (python evaluation/rag_eval.py).
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from assemble_graph import graph
 from tqdm import tqdm
 from dotenv import load_dotenv
 
-current_file = Path(__file__).resolve()
-PROJECT_ROOT = current_file.parent.parent
-sys.path.append(str(PROJECT_ROOT))
-
 load_dotenv()
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = PROJECT_ROOT
 DATASET_PATH = BASE_DIR / "evaluation/question_answers.json"
 RESULTS_PATH = BASE_DIR / "evaluation/eval_results.json"
 
@@ -136,37 +138,7 @@ def run_ragas(results):
     print(f"Résultats sauvegardés dans {ragas_path}")
 
 
-def run_deepeval(results):
-    valid_results = [
-        r for r in results if r.get("answer") and len(r["answer"].strip()) > 0
-    ]
-    print(f"\n--- DeepEval : {len(valid_results)} cas valides ---")
-
-    from deepeval.metrics import FaithfulnessMetric, AnswerRelevancyMetric
-    from deepeval.test_case import LLMTestCase
-    from deepeval import evaluate
-    from models import judge
-
-    test_cases = [
-        LLMTestCase(
-            input=r["question"],
-            actual_output=r["answer"],
-            retrieval_context=r["contexts"] if r["contexts"] else ["N/A"],
-            expected_output=r["ground_truth"],
-        )
-        for r in valid_results
-    ]
-
-    metrics = [
-        FaithfulnessMetric(threshold=0.7, model=judge),
-        AnswerRelevancyMetric(threshold=0.7, model=judge),
-    ]
-
-    evaluate(test_cases, metrics)
-
-
 if __name__ == "__main__":
     eval_data = collect_responses()
     if eval_data:
         run_ragas(eval_data)
-        run_deepeval(eval_data)

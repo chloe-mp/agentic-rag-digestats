@@ -62,4 +62,4 @@ _mock("qdrant_client.models")
 _mock("langchain_qdrant")
 
 # --- Tavily (évite la validation de la clé API au démarrage) ---
-_mock("langchain_community.tools.tavily_search")
+_mock("langchain_tavily")
