@@ -268,6 +268,49 @@ class TestGenerateQueryOrRespond:
         user_messages = [m for m in call_args if isinstance(m, HumanMessage)]
         assert any("Ma question spécifique" in m.content for m in user_messages)
 
+    @patch("query_pipeline.llm_must_call_tool")
+    @patch("query_pipeline.llm_with_tools")
+    def test_premier_passage_laisse_le_choix(self, mock_free, mock_forced):
+        from query_pipeline import generate_query_or_respond
+
+        mock_free.invoke.return_value = AIMessage(content="Bonjour !")
+
+        generate_query_or_respond(make_state("Bonjour"), EMPTY_CONFIG)
+
+        mock_free.invoke.assert_called_once()
+        mock_forced.invoke.assert_not_called()
+
+    @patch("query_pipeline.llm_must_call_tool")
+    @patch("query_pipeline.llm_with_tools")
+    def test_apres_reformulation_force_une_recherche(self, mock_free, mock_forced):
+        # Régression : après rewrite, le planner répondait de mémoire
+        # (sans generate_answer) avec les sources d'une recherche rejetée.
+        from query_pipeline import generate_query_or_respond
+
+        mock_forced.invoke.return_value = AIMessage(content="")
+
+        generate_query_or_respond(
+            make_state("Norme fumier de volaille ?", ["contexte insuffisant"]),
+            EMPTY_CONFIG,
+        )
+
+        mock_forced.invoke.assert_called_once()
+        mock_free.invoke.assert_not_called()
+
+    @patch("query_pipeline.llm_must_call_tool")
+    @patch("query_pipeline.llm_with_tools")
+    def test_nouvelle_question_apres_un_tour_complet_laisse_le_choix(self, mock_free, mock_forced):
+        from query_pipeline import generate_query_or_respond
+
+        state = make_state("Q1", ["contexte tour 1"])
+        state["messages"] += [AIMessage(content="Réponse 1"), HumanMessage(content="Merci !")]
+        mock_free.invoke.return_value = AIMessage(content="Avec plaisir.")
+
+        generate_query_or_respond(state, EMPTY_CONFIG)
+
+        mock_free.invoke.assert_called_once()
+        mock_forced.invoke.assert_not_called()
+
 
 # ──────────────────────────────────────────────
 # Structure du graphe

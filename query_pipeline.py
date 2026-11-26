@@ -22,11 +22,26 @@ SYSTEM_PROMPT = (
 # On lie les DEUX outils ici (sur Flash Lite : la planification est une tâche simple)
 tools = [retrieve_context, search_web]
 llm_with_tools = gemini_lite.bind_tools(tools)
+# Après une reformulation, le planner DOIT relancer une recherche : sinon il
+# répondait de mémoire, sans passer par generate_answer (qui impose de s'en
+# tenir au contexte), avec les sources d'une recherche jugée insuffisante.
+llm_must_call_tool = gemini_lite.bind_tools(tools, tool_choice="any")
+
+
+def _retrieval_already_tried(messages) -> bool:
+    """Vrai si un outil a déjà été appelé depuis le dernier message humain."""
+    for m in reversed(messages):
+        if m.type == "human":
+            return False
+        if m.type == "tool":
+            return True
+    return False
 
 
 def generate_query_or_respond(state: MessagesState, config: RunnableConfig):
     """Analyse la conversation et décide d'utiliser les outils ou de répondre."""
     # On s'assure que le système prompt est bien pris en compte
     messages = [{"role": "system", "content": SYSTEM_PROMPT}] + state["messages"]
-    response = llm_with_tools.invoke(messages, config=config)
+    llm = llm_must_call_tool if _retrieval_already_tried(state["messages"]) else llm_with_tools
+    response = llm.invoke(messages, config=config)
     return {"messages": [response]}

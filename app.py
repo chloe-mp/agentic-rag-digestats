@@ -171,9 +171,13 @@ async def chat(req: ChatRequest):
             # Fallbacks : réponse directe du planner, ou réponse générée
             # non streamée (le stream de tokens n'a rien produit).
             if not streamed_any_token:
-                fallback = direct_answer or final_answer
+                fallback = final_answer or direct_answer
                 if fallback:
                     yield _sse("token", {"content": fallback})
+                # Une réponse directe du planner ne s'appuie sur aucun document :
+                # afficher des sources serait trompeur.
+                if not final_answer and direct_answer:
+                    sources = []
 
             if not sources_sent:
                 yield _sse("sources", {"sources": sources})
