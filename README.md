@@ -233,9 +233,12 @@ Honest list of things I'd improve before claiming this is "done":
 git clone https://github.com/[your-handle]/[repo].git
 cd [repo]
 
-# Environment
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+# Environment (Python 3.12, same as the Docker image)
+uv venv --python 3.12 .venv && source .venv/bin/activate
+# requirements.txt is the Linux lock of the Cloud Run image (torch+cpu).
+# Linux: install it as is. macOS: swap torch for the PyPI macOS build.
+uv pip install -r requirements.txt --index-strategy unsafe-best-match \
+  --override overrides-macos.txt   # macOS only
 
 # Required env vars
 export GOOGLE_API_KEY=...

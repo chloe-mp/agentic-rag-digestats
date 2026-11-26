@@ -1,0 +1,3 @@
+# Surcharges pour installer requirements.txt (lock Linux de l’image Cloud Run) sur macOS.
+# torch==2.11.0+cpu n’existe que pour Linux/Windows : on prend la build macOS de PyPI.
+torch==2.11.0
