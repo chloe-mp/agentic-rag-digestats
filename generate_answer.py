@@ -2,7 +2,8 @@ from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import MessagesState
 
-from models import gemini
+from models import gemini, text_of
+from rewrite_question import ORIGINAL_QUESTION_KEY
 
 GENERATE_PROMPT = (
     "Tu es un expert en réglementation des digestats et engrais agricoles. "
@@ -33,17 +34,26 @@ def generate_answer(state: MessagesState, config: RunnableConfig):
     """Génère une réponse structurée en utilisant le contexte récupéré."""
     # 1. Extraction de la question
     # On cherche le dernier message humain
+    # (la question d'origine si rewrite_question l'a reformulée : on répond
+    # à ce que l'utilisateur a demandé, pas à la requête de recherche)
     question = "Pas de question trouvée"
-    for m in reversed(state["messages"]):
+    turn_start = 0
+    for i in range(len(state["messages"]) - 1, -1, -1):
+        m = state["messages"][i]
         if isinstance(m, HumanMessage) or m.type == "human":
-            question = m.content
+            question = m.additional_kwargs.get(ORIGINAL_QUESTION_KEY) or text_of(m.content)
+            turn_start = i
             break
 
     # 2. Extraction du contexte
     # ATTENTION : On filtre pour ne prendre QUE les messages des outils.
     # Si on prend le dernier message (state["messages"][-1]),
     # on risque de prendre le verdict du "grader" (ex: 'pertinent') au lieu des PDF !
-    tool_messages = [m.content for m in state["messages"] if m.type == "tool"]
+    # Uniquement les outils du tour courant : avec le checkpointer, l'historique
+    # contient aussi les recherches des questions précédentes du fil.
+    tool_messages = [
+        text_of(m.content) for m in state["messages"][turn_start:] if m.type == "tool"
+    ]
     context = (
         "\n\n---\n\n".join(tool_messages) if tool_messages else "Aucun contexte trouvé."
     )

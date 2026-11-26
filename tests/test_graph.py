@@ -171,6 +171,48 @@ class TestGenerateAnswer:
         assert "Ma question précise" in full_prompt
 
     @patch("generate_answer.gemini")
+    def test_repond_a_la_question_dorigine_pas_a_la_reformulation(self, mock_gemini):
+        from generate_answer import generate_answer
+
+        mock_gemini.invoke.return_value = MagicMock(content="Réponse.")
+        state = make_state("requête de recherche reformulée", ["ctx"])
+        state["messages"][0].additional_kwargs["original_question"] = "Ma vraie question"
+
+        generate_answer(state, EMPTY_CONFIG)
+
+        prompt = mock_gemini.invoke.call_args[0][0][0].content
+        assert "QUESTION : Ma vraie question" in prompt
+        assert "reformulée" not in prompt
+
+    @patch("generate_answer.gemini")
+    def test_contenus_en_blocs_gemini3_convertis_en_texte(self, mock_gemini):
+        from generate_answer import generate_answer
+
+        mock_gemini.invoke.return_value = MagicMock(content="Réponse.")
+        blocks = [{"type": "text", "text": "Question en blocs", "extras": {"signature": "SIG"}}]
+
+        generate_answer(make_state(blocks, ["ctx"]), EMPTY_CONFIG)
+
+        prompt = mock_gemini.invoke.call_args[0][0][0].content
+        assert "QUESTION : Question en blocs" in prompt
+        assert "SIG" not in prompt
+
+    @patch("generate_answer.gemini")
+    def test_ignore_le_contexte_des_tours_precedents(self, mock_gemini):
+        from generate_answer import generate_answer
+
+        mock_gemini.invoke.return_value = MagicMock(content="Réponse.")
+        state = make_state("Q1", ["CONTEXTE_TOUR_1"])
+        state["messages"].append(AIMessage(content="Réponse 1"))
+        state["messages"] += make_state("Q2", ["CONTEXTE_TOUR_2"])["messages"]
+
+        generate_answer(state, EMPTY_CONFIG)
+
+        prompt = mock_gemini.invoke.call_args[0][0][0].content
+        assert "CONTEXTE_TOUR_2" in prompt
+        assert "CONTEXTE_TOUR_1" not in prompt
+
+    @patch("generate_answer.gemini")
     def test_contexte_des_tool_messages_inclus(self, mock_gemini):
         from generate_answer import generate_answer
 
@@ -250,6 +292,53 @@ class TestRewriteQuestion:
         result = rewrite_question(state, EMPTY_CONFIG)
 
         assert len(result["messages"]) == nb_avant
+
+    @patch("rewrite_question.gemini_lite")
+    def test_reponse_gemini3_multi_options_reduite_a_une_phrase(self, mock_gemini):
+        # Régression (trace du 26/11) : Flash Lite 3.5 renvoie une liste de
+        # blocs avec plusieurs options ; la question devenait ce texte brut.
+        from rewrite_question import rewrite_question
+
+        mock_gemini.invoke.return_value = MagicMock(content=[{
+            "type": "text",
+            "text": (
+                "Voici plusieurs formulations techniques :\n\n"
+                "* **Option standard :**\n"
+                "  > « Réglementation de la mise sur le marché du fumier de volaille ? »\n\n"
+                "* **Option courte :**\n  > « Normes fumier de volaille. »"
+            ),
+            "extras": {"signature": "SIG"},
+        }])
+
+        result = rewrite_question(make_state("Norme fumier de volaille ?"), EMPTY_CONFIG)
+
+        human = result["messages"][0]
+        assert human.content == "Réglementation de la mise sur le marché du fumier de volaille ?"
+        assert human.additional_kwargs["original_question"] == "Norme fumier de volaille ?"
+
+    @patch("rewrite_question.gemini_lite")
+    def test_deuxieme_reformulation_repart_de_la_question_dorigine(self, mock_gemini):
+        from rewrite_question import rewrite_question
+
+        mock_gemini.invoke.return_value = MagicMock(content="Version 1")
+        state = make_state("Question d'origine", ["ctx"])
+        rewrite_question(state, EMPTY_CONFIG)
+        mock_gemini.invoke.return_value = MagicMock(content="Version 2")
+        result = rewrite_question(state, EMPTY_CONFIG)
+
+        prompt = mock_gemini.invoke.call_args[0][0][0]["content"]
+        assert "Question d'origine" in prompt
+        assert result["messages"][0].additional_kwargs["original_question"] == "Question d'origine"
+
+    @patch("rewrite_question.gemini_lite")
+    def test_reponse_vide_garde_la_question(self, mock_gemini):
+        from rewrite_question import rewrite_question
+
+        mock_gemini.invoke.return_value = MagicMock(content="")
+
+        result = rewrite_question(make_state("Ma question"), EMPTY_CONFIG)
+
+        assert result["messages"][0].content == "Ma question"
 
 
 # ──────────────────────────────────────────────

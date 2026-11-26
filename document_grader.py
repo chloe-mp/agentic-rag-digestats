@@ -6,7 +6,7 @@ from langgraph.config import get_config
 from langgraph.graph import MessagesState
 from pydantic import BaseModel, Field
 
-from models import gemini_lite
+from models import gemini_lite, text_of
 
 GRADE_PROMPT = (
     "You are a grader assessing whether a retrieved document can DIRECTLY ANSWER a user question.\n\n"
@@ -33,10 +33,10 @@ def grade_documents(
     # La question courante = dernier message humain (pas messages[0], qui est la
     # PREMIÈRE question du thread — faux en multi-tour avec le checkpointer).
     question = next(
-        (m.content for m in reversed(state["messages"]) if m.type == "human"),
+        (text_of(m.content) for m in reversed(state["messages"]) if m.type == "human"),
         "",
     )
-    context = state["messages"][-1].content
+    context = text_of(state["messages"][-1].content)
 
     # Compter les tentatives de retrieval du tour courant uniquement :
     # on remonte l'historique jusqu'au dernier message humain.

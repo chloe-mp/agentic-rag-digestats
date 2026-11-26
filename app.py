@@ -13,6 +13,7 @@ from langchain_core.messages import AIMessageChunk
 from pydantic import BaseModel
 
 from assemble_graph import graph
+from models import text_of
 
 load_dotenv()
 
@@ -76,16 +77,7 @@ def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
-def _text(content) -> str:
-    """Normalise le contenu d'un chunk LLM (str ou liste de blocs) en texte."""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        return "".join(
-            part.get("text", "") if isinstance(part, dict) else str(part)
-            for part in content
-        )
-    return ""
+_text = text_of  # contenu LLM (str ou liste de blocs Gemini 3) → texte
 
 
 @app.get("/api/health")
