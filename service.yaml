@@ -64,6 +64,8 @@ spec:
               name: langfuse-secret-key
         - name: LANGFUSE_HOST
           value: https://cloud.langfuse.com
+        - name: PYTHONUNBUFFERED
+          value: "1"
         resources:
           limits:
             cpu: "2"

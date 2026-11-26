@@ -18,5 +18,7 @@ ENV HF_HUB_OFFLINE=1
 COPY . .
 
 ENV PORT=8080
+# Logs visibles immédiatement dans Cloud Run (sinon print() reste bufferisé)
+ENV PYTHONUNBUFFERED=1
 EXPOSE 8080
 CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port $PORT --workers 1"]

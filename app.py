@@ -1,6 +1,8 @@
 import hmac
 import json
 import os
+import sys
+import traceback
 import uuid
 from pathlib import Path
 
@@ -177,8 +179,13 @@ async def chat(req: ChatRequest):
                 yield _sse("sources", {"sources": sources})
             yield _sse("done", {})
 
-        except Exception as e:
-            print(f"Erreur lors du streaming LangGraph : {e}")
+        except Exception:
+            # Trace complète sur stderr, flushée : un simple print(e) restait
+            # bloqué dans le buffer stdout du conteneur et n'atteignait jamais
+            # les logs Cloud Run (erreur invisible côté prod).
+            print("Erreur lors du streaming LangGraph :", file=sys.stderr)
+            traceback.print_exc()
+            sys.stderr.flush()
             yield _sse("error", {"detail": "Erreur interne du moteur RAG"})
         finally:
             if ctx:
