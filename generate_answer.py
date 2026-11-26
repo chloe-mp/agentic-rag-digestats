@@ -1,4 +1,4 @@
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import MessagesState
 
@@ -59,6 +59,7 @@ def generate_answer(state: MessagesState, config: RunnableConfig):
         config=config,
     )
 
-    # 5. RETOUR OBLIGATOIRE : Un dictionnaire
-    # On s'assure que c'est bien une liste de messages
-    return {"messages": [AIMessage(content=response.content)]}
+    # 5. On renvoie la réponse du LLM telle quelle (même id que les tokens
+    # streamés). Un nouvel AIMessage sans id était réémis par LangGraph en
+    # fin de nœud (stream_mode="messages") → réponse affichée en double.
+    return {"messages": [response]}

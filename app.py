@@ -9,6 +9,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
+from langchain_core.messages import AIMessageChunk
 from pydantic import BaseModel
 
 from assemble_graph import graph
@@ -162,7 +163,12 @@ async def chat(req: ChatRequest):
 
                 elif mode == "messages":
                     chunk, metadata = payload
-                    if metadata.get("langgraph_node") == "generate_answer":
+                    # Uniquement les tokens streamés (AIMessageChunk) : les
+                    # messages complets réémis en fin de nœud doubleraient la réponse.
+                    if (
+                        isinstance(chunk, AIMessageChunk)
+                        and metadata.get("langgraph_node") == "generate_answer"
+                    ):
                         text = _text(chunk.content)
                         if text:
                             streamed_any_token = True

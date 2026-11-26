@@ -122,13 +122,41 @@ class TestGenerateAnswer:
     def test_retourne_un_ai_message(self, mock_gemini):
         from generate_answer import generate_answer
 
-        mock_gemini.invoke.return_value = MagicMock(content="Réponse réglementaire.")
+        mock_gemini.invoke.return_value = AIMessage(content="Réponse réglementaire.", id="run-1")
 
         result = generate_answer(make_state("Seuil d'épandage ?", ["Seuil : 170 kg N/ha."]), EMPTY_CONFIG)
 
         assert "messages" in result
         assert isinstance(result["messages"][-1], AIMessage)
         assert result["messages"][-1].content == "Réponse réglementaire."
+        # Même id que la réponse streamée : sinon LangGraph la réémet (doublon UI)
+        assert result["messages"][-1].id == "run-1"
+
+    def test_stream_messages_ne_double_pas_la_reponse(self):
+        # Régression : en stream_mode="messages", la réponse finale était
+        # émise deux fois (tokens streamés + message complet en fin de nœud).
+        from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
+        from langchain_core.messages import AIMessageChunk
+        from langgraph.graph import END, START, MessagesState, StateGraph
+
+        from generate_answer import generate_answer
+
+        fake = GenericFakeChatModel(messages=iter([AIMessage(content="Seuil de 170 kg")]))
+        g = StateGraph(MessagesState)
+        g.add_node(generate_answer)
+        g.add_edge(START, "generate_answer")
+        g.add_edge("generate_answer", END)
+
+        with patch("generate_answer.gemini", fake):
+            chunks = [
+                c for c, _ in g.compile().stream(
+                    make_state("Seuil ?", ["ctx"]), stream_mode="messages"
+                )
+            ]
+
+        tokens = "".join(c.content for c in chunks if isinstance(c, AIMessageChunk))
+        assert tokens == "Seuil de 170 kg"
+        assert all(isinstance(c, AIMessageChunk) for c in chunks)
 
     @patch("generate_answer.gemini")
     def test_question_incluse_dans_le_prompt(self, mock_gemini):
