@@ -1,0 +1,93 @@
+[
+    {
+        "question": "Quelle norme s'applique pour la vente de fumier de volaille, et quelles teneurs minimales doit-il respecter ?",
+        "ground_truth": "La norme NF U 42-001-2 (engrais organiques), type 7 « Fumier de volaille » : fiente de volaille et sa litière traitées par compostage caractérisé ou aération forcée, contenant au moins 50 % de matière sèche ; teneur minimale N + P2O5 + K2O de 7 %, avec au moins 2 % de N, 2 % de P2O5 et 2 % de K2O.",
+        "source_document": "NF U 42-001-2.pdf",
+        "source_page": 18,
+        "question_type": "norme_nfu"
+    },
+    {
+        "question": "Quelle teneur minimale en matière sèche doit avoir une fiente de volaille déshydratée vendue comme engrais organique ?",
+        "ground_truth": "Au moins 75 % de matière sèche (NF U 42-001-2, type « Fiente de volaille déshydratée »), avec une teneur minimale N + P2O5 de 7 %, dont au moins 3 % de N et 2,5 % de P2O5.",
+        "source_document": "NF U 42-001-2.pdf",
+        "source_page": 17,
+        "question_type": "norme_nfu"
+    },
+    {
+        "question": "Quelles teneurs minimales en azote et en phosphore doit respecter une poudre d'os selon la NF U 42-001-2 ?",
+        "ground_truth": "N + P2O5 d'au moins 20 %, avec au moins 2 % de N et 16 % de P2O5.",
+        "source_document": "NF U 42-001-2.pdf",
+        "source_page": 17,
+        "question_type": "norme_nfu"
+    },
+    {
+        "question": "Quelles sont les teneurs minimales d'un engrais NP issu de lisier méthanisé composté selon la NF U 42-001-2 ?",
+        "ground_truth": "N + P2O5 d'au moins 6 %, avec au moins 1,5 % de N et 3 % de P2O5 ; le produit est obtenu par extraction de la phase solide de digestats bruts issus de la méthanisation des lisiers.",
+        "source_document": "NF U 42-001-2.pdf",
+        "source_page": 18,
+        "question_type": "norme_nfu"
+    },
+    {
+        "question": "Quelles teneurs minimales doit avoir un guano d'oiseaux marins pour être commercialisé sous la norme NF U 42-001-2 ?",
+        "ground_truth": "N + P2O5 d'au moins 15 %, avec au moins 4 % de N et 8 % de P2O5.",
+        "source_document": "NF U 42-001-2.pdf",
+        "source_page": 16,
+        "question_type": "norme_nfu"
+    },
+    {
+        "question": "Quelle est la teneur minimale en azote exigée pour de la corne torréfiée vendue comme engrais organique ?",
+        "ground_truth": "Au moins 12 % de N (NF U 42-001-2, type « Corne torréfiée »), avec au plus 1 % pour la somme N nitrique + N ammoniacal + N uréique.",
+        "source_document": "NF U 42-001-2.pdf",
+        "source_page": 11,
+        "question_type": "norme_nfu"
+    },
+    {
+        "question": "Quelle est la teneur limite en cadmium d'un amendement organique conforme à la NF U 44-051 ?",
+        "ground_truth": "3 mg/kg de matière sèche.",
+        "source_document": "norme NF U 44-051 2006+A1_2010_.pdf",
+        "source_page": 19,
+        "question_type": "norme_nfu"
+    },
+    {
+        "question": "Quels critères concernant les salmonelles s'appliquent aux amendements organiques NF U 44-051 ?",
+        "ground_truth": "Absence de Salmonella dans 1 g pour toutes cultures sauf maraîchères, et absence dans 25 g pour les cultures maraîchères.",
+        "source_document": "norme NF U 44-051 2006+A1_2010_.pdf",
+        "source_page": 20,
+        "question_type": "norme_nfu"
+    },
+    {
+        "question": "Quelles teneurs maximales en plastiques et en verre ou métaux sont admises dans un amendement organique NF U 44-051 ?",
+        "ground_truth": "Films + PSE > 5 mm : moins de 0,3 % de la MS ; autres plastiques > 5 mm : moins de 0,8 % de la MS ; verres + métaux > 2 mm : moins de 2,0 % de la MS.",
+        "source_document": "norme NF U 44-051 2006+A1_2010_.pdf",
+        "source_page": 21,
+        "question_type": "norme_nfu"
+    },
+    {
+        "question": "Un amendement organique NF U 44-051 peut-il contenir 8 % de N + P2O5 + K2O sur matière brute ?",
+        "ground_truth": "Non : les amendements organiques doivent respecter N + P2O5 + K2O < 7 % sur matière brute (NF U 44-051).",
+        "source_document": "norme NF U 44-051 2006+A1_2010_.pdf",
+        "source_page": 5,
+        "question_type": "norme_nfu_negative"
+    },
+    {
+        "question": "Quelle est la teneur maximale en cadmium d'un engrais organo-minéral selon la NF U 42-001-3 ?",
+        "ground_truth": "90 mg/kg de P2O5 si la teneur en P2O5 est d'au moins 5 % ; 5 mg/kg de matière sèche si la teneur en P2O5 est inférieure à 5 %.",
+        "source_document": "NF U 42-001- 3 - novembre 2020.pdf",
+        "source_page": 17,
+        "question_type": "norme_nfu"
+    },
+    {
+        "question": "Quelles teneurs minimales doit respecter un engrais organo-minéral NPK selon la NF U 42-001-3 ?",
+        "ground_truth": "N + P2O5 + K2O d'au moins 7 %, avec au moins 3 % pour au moins un des trois éléments nutritifs majeurs.",
+        "source_document": "NF U 42-001- 3 - novembre 2020.pdf",
+        "source_page": 14,
+        "question_type": "norme_nfu"
+    },
+    {
+        "question": "Un engrais organo-minéral NF U 42-001-3 peut-il être mis sur le marché s'il contient des salmonelles ?",
+        "ground_truth": "Non : la norme exige l'absence de Salmonella dans 25 g.",
+        "source_document": "NF U 42-001- 3 - novembre 2020.pdf",
+        "source_page": 18,
+        "question_type": "norme_nfu_negative"
+    }
+]

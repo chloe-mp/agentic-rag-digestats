@@ -249,8 +249,11 @@ export LANGFUSE_PUBLIC_KEY=...
 export LANGFUSE_SECRET_KEY=...
 export APP_PASSWORD=...
 
-# Index your PDFs (one-time)
-python indexing_pipeline.py --reindex
+# Index your PDFs into a NEW Qdrant collection (never overwrites one)
+python build_chunks.py            # PDFs → chunks.jsonl (Gemini vision for tables, cached in parsed/)
+./hf_job.sh index <collection>    # BGE-M3 embeddings on a rented GPU (HF Jobs)
+export QDRANT_COLLECTION=<collection>
+# Evaluate before switching: ./hf_job.sh eval <collection>  (RAGAS)
 
 # Run
 uvicorn app:app --reload --port 8080

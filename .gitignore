@@ -38,3 +38,7 @@ cleanup-policy.json
 deploy.sh
 docs/
 qdrant/
+
+# Corpus préparé (transcriptions des normes AFNOR : sous droits, hors dépôt)
+parsed/
+chunks.jsonl

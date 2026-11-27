@@ -66,6 +66,10 @@ spec:
           value: https://cloud.langfuse.com
         - name: PYTHONUNBUFFERED
           value: "1"
+        # Corpus v2 (build_chunks.py, 27/11/2026). Retour arrière : remettre
+        # reglementation_digestats (toujours présente dans Qdrant).
+        - name: QDRANT_COLLECTION
+          value: reglementation_digestats_v2
         resources:
           limits:
             cpu: "2"

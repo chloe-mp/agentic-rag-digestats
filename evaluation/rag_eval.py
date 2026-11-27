@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 from hashlib import md5
 from pathlib import Path
@@ -15,14 +16,21 @@ from assemble_graph import graph
 
 load_dotenv()
 
+from models import text_of  # noqa: E402
+
 BASE_DIR = PROJECT_ROOT
-DATASET_PATH = BASE_DIR / "evaluation/question_answers.json"
-RESULTS_PATH = BASE_DIR / "evaluation/eval_results.json"
+DATASET_PATH = BASE_DIR / "evaluation" / os.environ.get("EVAL_DATASET", "question_answers.json")
+# Dossier de sortie : un par collection évaluée (eval_results.json est un cache
+# de reprise — mélanger deux collections fausserait la comparaison).
+OUT_DIR = Path(os.environ.get("EVAL_OUT_DIR", BASE_DIR / "evaluation"))
+RESULTS_PATH = OUT_DIR / "eval_results.json"
+LIMIT = int(os.environ["EVAL_LIMIT"]) if os.environ.get("EVAL_LIMIT") else None
 
 
 def collect_responses():
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
     with open(DATASET_PATH, "r", encoding="utf-8") as f:
-        dataset = json.load(f)
+        dataset = json.load(f)[:LIMIT]
 
     if RESULTS_PATH.exists():
         with open(RESULTS_PATH, "r", encoding="utf-8") as f:
@@ -50,20 +58,22 @@ def collect_responses():
         try:
             for chunk in graph.stream(inputs, config=config):
                 for node, update in chunk.items():
+                    # Tous les ToolMessages du nœud (le planner peut lancer
+                    # plusieurs recherches en parallèle), pas seulement le dernier.
                     if node == "retrieve" and "messages" in update:
-                        last_msg = update["messages"][-1]
-                        if hasattr(last_msg, "artifact") and last_msg.artifact:
-                            for doc in last_msg.artifact:
+                        for msg in update["messages"]:
+                            for doc in getattr(msg, "artifact", None) or []:
                                 if doc.page_content not in contexts:
                                     contexts.append(doc.page_content)
 
                     if node == "search_web" and "messages" in update:
-                        content = update["messages"][-1].content
+                        content = text_of(update["messages"][-1].content)
                         if content not in contexts:
                             contexts.append(content)
 
+                    # Gemini 3 : contenu en liste de blocs → texte
                     if node == "generate_answer" and "messages" in update:
-                        answer = update["messages"][-1].content
+                        answer = text_of(update["messages"][-1].content)
 
             results.append(
                 {

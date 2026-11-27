@@ -54,15 +54,18 @@ Agentic_RAG/
 
 ### 0. Construire l'index Qdrant en local (avant le build Docker)
 
-L'index vectoriel doit être généré localement et copié dans l'image. Il n'est **pas** reconstruit automatiquement au démarrage.
+L'index vit dans Qdrant Cloud, dans une collection nommée ; l'app lit celle de
+`QDRANT_COLLECTION` (service.yaml). Une nouvelle version du corpus s'indexe
+toujours dans une **nouvelle** collection, à côté de la production :
 
 ```bash
-# Depuis la racine du projet, avec ton .env chargé
-python indexing_pipeline.py --reindex
+python build_chunks.py                      # PDF → chunks.jsonl (vision Gemini pour les tableaux)
+./hf_job.sh index <nouvelle_collection>     # embeddings BGE-M3 sur GPU loué (HF Jobs)
+./hf_job.sh eval  <nouvelle_collection>     # éval RAGAS, à comparer à la collection en prod
 ```
 
-Cela crée (ou met à jour) le dossier `qdrant/` avec l'index BGE-M3 dense + sparse.
-Vérifier que `qdrant/` est bien présent avant de passer à l'étape suivante.
+Puis basculer en changeant `QDRANT_COLLECTION` dans `service.yaml`. Retour
+arrière : remettre l'ancien nom (l'ancienne collection n'est jamais supprimée).
 
 ---
 
@@ -132,11 +135,8 @@ L'API REST est sur `/api/chat` et `/api/health`.
 
 Quand ton client a de nouveaux PDFs réglementaires :
 
-1. Ajoute-les dans le dossier `docs/`
-2. Réindexe localement :
-```bash
-python indexing_pipeline.py --reindex
-```
+1. Ajoute-les dans le dossier `docs/` et référence-les dans `DOCS` (build_chunks.py)
+2. Réindexe dans une nouvelle collection et évalue (voir étape 0)
 3. Rebuild et redéploie :
 ```bash
 docker build -t europe-west1-docker.pkg.dev/rag-digestats/rag-repo/rag-app:latest .

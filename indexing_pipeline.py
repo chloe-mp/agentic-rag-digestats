@@ -1,5 +1,6 @@
-import glob
+import json
 import os
+import re
 import sys
 import warnings
 from hashlib import md5
@@ -25,14 +26,19 @@ elif torch.cuda.is_available():
 else:
     DEVICE = "cpu"
 
-BASE_DIR = Path(os.environ.get("APP_BASE_DIR", "."))
-PDF_DIR = BASE_DIR / "docs"
+# Collection Qdrant interrogée : permet d'indexer une nouvelle version du
+# corpus à côté de la production, de l'évaluer, puis de basculer par variable
+# d'environnement (sans réindexer ni redéployer le code).
+COLLECTION = os.environ.get("QDRANT_COLLECTION", "reglementation_digestats")
 
 print(f"[INIT] Chargement des modeles sur {DEVICE}...")
 
 _bge_m3_model = BGEM3FlagModel(
     'BAAI/bge-m3',
-    use_fp16=True,
+    # fp16 uniquement sur GPU. Avec device="cpu" passé explicitement,
+    # FlagEmbedding ne désactive PAS le fp16 lui-même (bge_m3.py) : le modèle
+    # tournait en half() sur le CPU de Cloud Run, très lent (70-100 s/recherche).
+    use_fp16=DEVICE != "cpu",
     device=DEVICE
 )
 
@@ -71,19 +77,13 @@ else:
     )
     _qdrant_client = None
 
-if _qdrant_client is not None and not any(
-    c.name == "reglementation_digestats" for c in _qdrant_client.get_collections().collections
-):
-    _qdrant_client.create_collection(
-        collection_name="reglementation_digestats",
-        vectors_config={
-            "dense": VectorParams(size=1024, distance=Distance.COSINE)
-        },
-        sparse_vectors_config={
-            "sparse": SparseVectorParams(modifier=Modifier.IDF)
-        }
+if _qdrant_client is not None and not _qdrant_client.collection_exists(COLLECTION):
+    # Pas de création silencieuse : une collection vide ferait répondre l'app
+    # « sans source » au lieu de signaler une erreur de configuration.
+    warnings.warn(
+        f"Collection Qdrant '{COLLECTION}' introuvable : lancer index_chunks.py.",
+        RuntimeWarning,
     )
-    print("[INIT] Collection 'reglementation_digestats' créée.")
 
 _reranker = CrossEncoder("BAAI/bge-reranker-v2-m3", device=DEVICE)
 
@@ -91,7 +91,7 @@ _qdrant_points = []
 if _qdrant_client is not None:
     try:
         _qdrant_points, _ = _qdrant_client.scroll(
-            collection_name="reglementation_digestats",
+            collection_name=COLLECTION,
             limit=100_000,
             with_payload=True,
         )
@@ -99,7 +99,7 @@ if _qdrant_client is not None:
         print(f"[WARN] Impossible de charger les points Qdrant pour BM25 : {e}")
         _qdrant_points = []
 
-print(f"[INIT] Pret. Device: {DEVICE}, Chunks: {len(_qdrant_points)}")
+print(f"[INIT] Pret. Device: {DEVICE}, Collection: {COLLECTION}, Chunks: {len(_qdrant_points)}")
 
 _bm25_retriever = None
 if _qdrant_points:
@@ -114,102 +114,43 @@ if _qdrant_points:
     _bm25_retriever.k = 30
 
 
-def load_pdf_with_tables(pdf_path):
-    import pdfplumber
+def index_chunks(chunks_path: Path, collection: str, batch_size: int = 64) -> int:
+    """Indexe chunks.jsonl (produit par build_chunks.py) dans une collection NEUVE.
 
-    docs = []
-    with pdfplumber.open(pdf_path) as pdf:
-        for i, page in enumerate(pdf.pages):
-            text = page.extract_text() or ""
-            tables = page.extract_tables()
-            for table in tables:
-                table_text = "\n".join([" | ".join(filter(None, row)) for row in table])
-                if table_text.strip():
-                    text += f"\n\nTABLEAU:\n{table_text}"
-            if len(text.strip()) > 50:
-                docs.append(
-                    Document(
-                        page_content=text.strip(),
-                        metadata={"source": os.path.basename(pdf_path), "page": i},
-                    )
-                )
-    return docs
-
-
-def index_documents():
-    from langchain_text_splitters import RecursiveCharacterTextSplitter
-
-    if any(c.name == "reglementation_digestats" for c in _qdrant_client.get_collections().collections):
-        _qdrant_client.delete_collection("reglementation_digestats")
+    Refuse d'écraser une collection existante : on indexe à côté de la
+    production, on évalue, puis on bascule via QDRANT_COLLECTION.
+    """
+    if _qdrant_client.collection_exists(collection):
+        raise SystemExit(f"La collection '{collection}' existe déjà : choisir un autre nom.")
+    chunks = [json.loads(line) for line in chunks_path.read_text(encoding="utf-8").splitlines()]
     _qdrant_client.create_collection(
-        collection_name="reglementation_digestats",
+        collection_name=collection,
         vectors_config={"dense": VectorParams(size=1024, distance=Distance.COSINE)},
         sparse_vectors_config={"sparse": SparseVectorParams(modifier=Modifier.IDF)},
     )
-    print("[INDEX] Collection réinitialisée.")
-
-    all_docs = []
-    pdf_paths = glob.glob(f"{PDF_DIR}/*.pdf")
-    print(f"[INDEX] {len(pdf_paths)} PDFs trouves dans {PDF_DIR}")
-    for path in pdf_paths:
-        all_docs.extend(load_pdf_with_tables(path))
-
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1500,
-        chunk_overlap=200,
-        separators=["\n\n", "\n", ". ", " ", ""],
-    )
-    all_splits = text_splitter.split_documents(all_docs)
-    print(f"[INDEX] {len(all_splits)} chunks à indexer...")
-
-    points = []
-    batch_size = 64
-
-    for i in range(0, len(all_splits), batch_size):
-        batch_docs = all_splits[i:i + batch_size]
-        texts = [doc.page_content for doc in batch_docs]
-        embeddings = bge_m3_embed(texts)
-        dense_vecs = embeddings["dense"]
-        sparse_vecs = embeddings["sparse"]
-
-        for j, doc in enumerate(batch_docs):
-            points.append(models.PointStruct(
-                id=i + j,
-                vector={
-                    "dense": dense_vecs[j].tolist(),
-                    "sparse": models.SparseVector(
-                        indices=[int(k) for k in sparse_vecs[j]],
-                        values=list(sparse_vecs[j].values())
-                    )
-                },
-                payload={
-                    "page_content": doc.page_content,
-                    "metadata": doc.metadata
-                }
-            ))
-
-    _qdrant_client.upsert(
-        collection_name="reglementation_digestats",
-        points=points,
-        wait=True
-    )
-
-    global _bm25_retriever
-    points_scroll, _ = _qdrant_client.scroll(
-        collection_name="reglementation_digestats",
-        limit=100_000,
-        with_payload=True,
-    )
-    if points_scroll:
-        bm25_docs = [
-            Document(page_content=p.payload.get("page_content", ""),
-                     metadata=p.payload.get("metadata", {}))
-            for p in points_scroll
-        ]
-        _bm25_retriever = BM25Retriever.from_documents(bm25_docs)
-        _bm25_retriever.k = 30
-
-    print(f"[INDEX] Terminé. {len(all_splits)} chunks indexés en hybrid dense+sparse.")
+    for start in range(0, len(chunks), batch_size):
+        batch = chunks[start:start + batch_size]
+        emb = bge_m3_embed([c["page_content"] for c in batch])
+        _qdrant_client.upsert(
+            collection_name=collection,
+            points=[
+                models.PointStruct(
+                    id=start + j,
+                    vector={
+                        "dense": emb["dense"][j].tolist(),
+                        "sparse": models.SparseVector(
+                            indices=[int(k) for k in emb["sparse"][j]],
+                            values=list(emb["sparse"][j].values()),
+                        ),
+                    },
+                    payload={"page_content": c["page_content"], "metadata": c["metadata"]},
+                )
+                for j, c in enumerate(batch)
+            ],
+            wait=True,
+        )
+        print(f"[INDEX] {min(start + batch_size, len(chunks))}/{len(chunks)}", flush=True)
+    return len(chunks)
 
 
 def rrf_fusion(results_lists: list[list[Document]], k: int = 60) -> list[Document]:
@@ -227,6 +168,26 @@ def rrf_fusion(results_lists: list[list[Document]], k: int = 60) -> list[Documen
     return [doc_map[key] for key in sorted_keys]
 
 
+def _dedup_key(doc: Document) -> str:
+    """Empreinte du contenu, sans le titre de document ajouté en tête de chunk."""
+    body = doc.page_content.split("\n", 1)[-1]
+    return re.sub(r"\W+", "", body.lower())[:300]
+
+
+def select_top(docs: list[Document], n: int = 5) -> list[Document]:
+    """Les n meilleurs documents, sans doublon de contenu (même passage cité deux fois)."""
+    seen, out = set(), []
+    for doc in docs:
+        key = _dedup_key(doc)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(doc)
+        if len(out) == n:
+            break
+    return out
+
+
 @tool(response_format="content_and_artifact")
 def retrieve_context(query: str):
     """Recherche hybride dense + sparse BGE-M3 + BM25 + RRF + reranking."""
@@ -238,7 +199,7 @@ def retrieve_context(query: str):
     )
 
     qdrant_results = _qdrant_client.query_points(
-        collection_name="reglementation_digestats",
+        collection_name=COLLECTION,
         prefetch=[
             models.Prefetch(query=query_dense, using="dense", limit=30),
             models.Prefetch(query=query_sparse, using="sparse", limit=30),
@@ -258,7 +219,7 @@ def retrieve_context(query: str):
 
     if not candidates:
         return "Aucune source trouvée.", []
-    
+
     candidates = candidates[:10]
 
     pairs = [[query, doc.page_content] for doc in candidates]
@@ -268,7 +229,7 @@ def retrieve_context(query: str):
         doc.metadata["rerank_score"] = float(rerank_scores[i])
 
     sorted_candidates = sorted(candidates, key=lambda x: x.metadata.get("rerank_score", -100), reverse=True)
-    final_docs = sorted_candidates[:5]
+    final_docs = select_top(sorted_candidates, 5)
 
     return (
         "\n\n".join(f"SOURCE: {d.metadata.get('source')}\nCONTENU: {d.page_content}" for d in final_docs),
@@ -277,12 +238,11 @@ def retrieve_context(query: str):
 
 
 if __name__ == "__main__":
-    if "--reindex" in sys.argv:
-        index_documents()
-    elif "--query" in sys.argv:
+    if "--query" in sys.argv:
         idx = sys.argv.index("--query")
         question = " ".join(sys.argv[idx + 1:])
         content, docs = retrieve_context.func(question)
         print(content)
     else:
-        print(f"--- DEVICE: {DEVICE} ---")
+        print("Usage : python indexing_pipeline.py --query <question>")
+        print("Indexation : python build_chunks.py puis index_chunks.py")
