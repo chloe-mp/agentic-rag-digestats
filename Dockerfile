@@ -11,7 +11,10 @@ RUN python -c "\
 from FlagEmbedding import BGEM3FlagModel; \
 from sentence_transformers import CrossEncoder; \
 BGEM3FlagModel('BAAI/bge-m3', use_fp16=True); \
-CrossEncoder('BAAI/bge-reranker-v2-m3')"
+CrossEncoder('BAAI/bge-reranker-v2-m3'); \
+CrossEncoder('cross-encoder/mmarco-mMiniLMv2-L12-H384-v1')"
+# Les deux rerankers sont dans l'image (HF_HUB_OFFLINE) : on choisit avec
+# RERANKER_MODEL (service.yaml), retour arrière sans rebuild.
 
 ENV HF_HUB_OFFLINE=1
 

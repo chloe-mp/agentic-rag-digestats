@@ -75,6 +75,11 @@ spec:
         # encoder une requête, 86 s pour reranker 10 extraits (27/11/2026).
         - name: OMP_NUM_THREADS
           value: "2"
+        # Reranker léger (118M) : bge-reranker-v2-m3 (568M) prenait ~78 s pour
+        # 10 paires sur 2 CPU. Éval 27/11 : NF U 10/13 pour les deux, recall
+        # identique, context_precision -0,07. Retour : BAAI/bge-reranker-v2-m3.
+        - name: RERANKER_MODEL
+          value: cross-encoder/mmarco-mMiniLMv2-L12-H384-v1
         resources:
           limits:
             cpu: "2"

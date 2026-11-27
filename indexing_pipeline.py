@@ -97,7 +97,19 @@ if _qdrant_client is not None and not _qdrant_client.collection_exists(COLLECTIO
         RuntimeWarning,
     )
 
-_reranker = CrossEncoder("BAAI/bge-reranker-v2-m3", device=DEVICE)
+# Reranker configurable pour l'évaluer sans changer le code. bge-reranker-v2-m3
+# (568M) prend ~78 s pour 10 paires sur les 2 CPU de Cloud Run, même à chaud.
+# Le modèle choisi doit aussi être téléchargé dans le Dockerfile (HF_HUB_OFFLINE).
+RERANKER_MODEL = os.environ.get("RERANKER_MODEL", "BAAI/bge-reranker-v2-m3")
+_reranker = CrossEncoder(RERANKER_MODEL, device=DEVICE, max_length=512)
+
+# Préchauffage : le 1er calcul après démarrage était ~50 s plus lent (poids
+# lus depuis le disque au premier usage : encodage 23,5 s à froid vs 1,1 s à
+# chaud). On le paie ici, avant de servir, plutôt que sur la 1re question.
+_t = time.perf_counter()
+bge_m3_embed("préchauffage")
+_reranker.predict([["préchauffage", "préchauffage des modèles"]])
+print(f"[INIT] Préchauffage {time.perf_counter() - _t:.1f}s (reranker {RERANKER_MODEL})", flush=True)
 
 _qdrant_points = []
 if _qdrant_client is not None:

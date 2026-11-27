@@ -5,6 +5,7 @@
 #   ./hf_job.sh eval  reglementation_digestats      # éval RAGAS (50 questions) d'une collection
 #   EVAL_LIMIT=3 ./hf_job.sh eval <collection>      # essai rapide
 #   EVAL_DATASET=question_answers_nfu.json ./hf_job.sh eval <collection>  # questions normes NF U
+#   RERANKER_MODEL=<repo HF> ./hf_job.sh eval <collection>                # autre reranker
 #
 # Préalable pour index : python build_chunks.py (chunks.jsonl, local, sans modèle).
 # Les deux évals comparées doivent tourner sur le MÊME matériel (FLAVOR fixe).
@@ -24,7 +25,7 @@ IMAGE="ghcr.io/astral-sh/uv:python3.12-bookworm"
 MODE="${1:?usage : $0 index|eval <collection>}"
 COLLECTION="${2:?usage : $0 index|eval <collection>}"
 COMMIT="$(git rev-parse --short HEAD)$(git diff --quiet HEAD -- . || echo -dirty)"
-RUN="${MODE}-${COLLECTION}${EVAL_DATASET:+-${EVAL_DATASET%.json}}-$(date +%Y%m%d-%H%M)"
+RUN="${MODE}-${COLLECTION}${EVAL_DATASET:+-${EVAL_DATASET%.json}}${RERANKER_MODEL:+-${RERANKER_MODEL##*/}}-$(date +%Y%m%d-%H%M)"
 
 [ "$MODE" = index ] && [ ! -s chunks.jsonl ] && {
   echo "chunks.jsonl absent : lancer d'abord python build_chunks.py" >&2; exit 1; }
@@ -68,6 +69,7 @@ hf jobs run --detach \
   -e GIT_COMMIT="$COMMIT" \
   ${EVAL_LIMIT:+-e EVAL_LIMIT=$EVAL_LIMIT} \
   ${EVAL_DATASET:+-e EVAL_DATASET=$EVAL_DATASET} \
+  ${RERANKER_MODEL:+-e RERANKER_MODEL=$RERANKER_MODEL} \
   -v "hf://buckets/$BUCKET:/bucket" \
   "$IMAGE" \
   bash -c "$SETUP && $CMD"
