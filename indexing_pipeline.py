@@ -2,6 +2,7 @@ import json
 import os
 import re
 import sys
+import time
 import warnings
 from hashlib import md5
 from pathlib import Path
@@ -31,7 +32,18 @@ else:
 # d'environnement (sans réindexer ni redéployer le code).
 COLLECTION = os.environ.get("QDRANT_COLLECTION", "reglementation_digestats")
 
-print(f"[INIT] Chargement des modeles sur {DEVICE}...")
+def _cgroup_cpus() -> str:
+    """Quota CPU du conteneur (cgroup v2), à comparer aux threads torch."""
+    try:
+        quota, period = Path("/sys/fs/cgroup/cpu.max").read_text().split()
+        return "illimité" if quota == "max" else f"{int(quota) / int(period):g}"
+    except Exception:
+        return "?"
+
+
+print(f"[INIT] Chargement des modeles sur {DEVICE}... "
+      f"(torch threads={torch.get_num_threads()}, os.cpu_count={os.cpu_count()}, "
+      f"quota cgroup={_cgroup_cpus()})")
 
 _bge_m3_model = BGEM3FlagModel(
     'BAAI/bge-m3',
@@ -191,7 +203,18 @@ def select_top(docs: list[Document], n: int = 5) -> list[Document]:
 @tool(response_format="content_and_artifact")
 def retrieve_context(query: str):
     """Recherche hybride dense + sparse BGE-M3 + BM25 + RRF + reranking."""
+    # Chronométrage par sous-étape (une recherche prenait ~100 s sur Cloud Run).
+    t0 = time.perf_counter()
+    timings = {}
+
+    def lap(step):
+        nonlocal t0
+        now = time.perf_counter()
+        timings[step] = round(now - t0, 2)
+        t0 = now
+
     query_emb = bge_m3_embed(query)
+    lap("embed")
     query_dense = query_emb["dense"][0].tolist()
     query_sparse = models.SparseVector(
         indices=[int(k) for k in query_emb["sparse"][0]],
@@ -213,8 +236,10 @@ def retrieve_context(query: str):
         Document(page_content=r.payload["page_content"], metadata=r.payload["metadata"])
         for r in qdrant_results
     ]
+    lap("qdrant")
 
     bm25_docs = _bm25_retriever.invoke(query) if _bm25_retriever else []
+    lap("bm25")
     candidates = rrf_fusion([qdrant_docs, bm25_docs])
 
     if not candidates:
@@ -224,6 +249,9 @@ def retrieve_context(query: str):
 
     pairs = [[query, doc.page_content] for doc in candidates]
     rerank_scores = _reranker.predict(pairs, batch_size=8)
+    lap("rerank")
+    print(f"[TIMING] retrieve_context {timings} total={sum(timings.values()):.1f}s "
+          f"(candidats={len(pairs)}, car. max={max(len(p[1]) for p in pairs)})", flush=True)
 
     for i, doc in enumerate(candidates):
         doc.metadata["rerank_score"] = float(rerank_scores[i])
