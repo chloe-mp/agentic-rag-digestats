@@ -70,6 +70,11 @@ spec:
         # reglementation_digestats (toujours présente dans Qdrant).
         - name: QDRANT_COLLECTION
           value: reglementation_digestats_v2
+        # Threads torch = CPU alloués (limits.cpu). Avec 4 threads pour 2 CPU,
+        # l'attente active OpenMP faisait brider le conteneur : 23 s pour
+        # encoder une requête, 86 s pour reranker 10 extraits (27/11/2026).
+        - name: OMP_NUM_THREADS
+          value: "2"
         resources:
           limits:
             cpu: "2"

@@ -42,3 +42,34 @@ class TestAuthFailClosed:
         with patch("app.APP_PASSWORD", None):
             res = client.post("/api/chat", json={"question": "q", "password": ""})
         assert res.status_code == 500
+
+
+class TestSources:
+    def test_recherches_paralleles_gardent_les_sources_documentaires(self, client):
+        # Régression (trace du 27/11) : retrieve_context et search_web lancés en
+        # parallèle → seul le dernier ToolMessage était lu, l'UI n'affichait
+        # que « Recherche Web » alors que la réponse citait le 2019/1009.
+        import json
+
+        from langchain_core.documents import Document
+        from langchain_core.messages import AIMessage, ToolMessage
+
+        doc_msg = ToolMessage(
+            content="ctx", tool_call_id="1", name="retrieve_context",
+            artifact=[Document(page_content="x", metadata={"source": "Reglement_UE_2019_1009.pdf"})],
+        )
+        web_msg = ToolMessage(content="web", tool_call_id="2", name="search_web")
+        events = [
+            ("updates", {"retrieve": {"messages": [doc_msg, web_msg]}}),
+            ("updates", {"generate_answer": {"messages": [AIMessage(content="Réponse")]}}),
+        ]
+
+        with patch("app.APP_PASSWORD", "pw"), patch("app.graph") as graph:
+            graph.stream.return_value = iter(events)
+            res = client.post("/api/chat", json={"question": "q", "password": "pw"})
+
+        sources = next(
+            json.loads(block.split("data: ", 1)[1])["sources"]
+            for block in res.text.split("\n\n") if block.startswith("event: sources")
+        )
+        assert sources == ["Reglement_UE_2019_1009.pdf", "Recherche Web"]

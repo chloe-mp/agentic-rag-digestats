@@ -129,13 +129,18 @@ async def chat(req: ChatRequest):
                         if node in NODE_STATUS:
                             yield _sse("status", {"message": NODE_STATUS[node]})
 
+                        # Tous les ToolMessages de l'étape : le planner peut lancer
+                        # retrieve_context ET search_web en parallèle ; ne lire que
+                        # le dernier perdait les sources documentaires.
                         if node == "retrieve" and "messages" in update:
-                            last_msg = update["messages"][-1]
-                            if getattr(last_msg, "artifact", None):
-                                for doc in last_msg.artifact:
+                            for msg in update["messages"]:
+                                for doc in getattr(msg, "artifact", None) or []:
                                     src = doc.metadata.get("source", "Source inconnue")
                                     if src not in sources:
                                         sources.append(src)
+                                if getattr(msg, "name", None) == "search_web" and \
+                                        "Recherche Web" not in sources:
+                                    sources.append("Recherche Web")
 
                         if node == "search_web" and "Recherche Web" not in sources:
                             sources.append("Recherche Web")
